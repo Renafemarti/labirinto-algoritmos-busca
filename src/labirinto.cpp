@@ -65,7 +65,7 @@ int main() {
     Renderer renderer(screenWidth, screenHeight);
     renderer.computeCellSize(maze);
     
-    // AQUI ESTAVA O SEGREDO: Inicializa os recursos visuais do OpenGL
+    // Inicializa os recursos visuais do OpenGL
     renderer.initOpenGLResources(); 
 
     Algorithm currentAlgo = Algorithm::BFS;
@@ -85,11 +85,13 @@ int main() {
     std::cout << "--- CONTROLES DO SIMULADOR ---\n";
     std::cout << "[1] BFS | [2] DFS | [3] A*\n";
     std::cout << "[ESPACO] Novo Labirinto | [R] Repetir Animacao\n";
+    std::cout << "[Z] Mais Lento | [X] Mais Rapido\n";
+    std::cout << "[SETAS] Mover Camera Livremente\n";
     std::cout << "Algoritmo atual: " << algorithmName(currentAlgo) << "\n\n";
 
     // 5. Loop de Jogo / Renderização
     while (!glfwWindowShouldClose(window)) {
-        
+
         float currentFrameTime = glfwGetTime();
         float deltaTime = currentFrameTime - lastFrameTime;
         lastFrameTime = currentFrameTime;
@@ -108,53 +110,82 @@ int main() {
         if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && !key1Pressed) {
             currentAlgo = Algorithm::BFS; result = solve(maze, currentAlgo);
             animatedStep = 0; stepTimer = 0.0f; animationDone = false; key1Pressed = true;
-            std::cout << "Algoritmo alterado para: BFS\n";
+            std::cout << "Algoritmo alteredo para: BFS\n";
         } else if (glfwGetKey(window, GLFW_KEY_1) == GLFW_RELEASE) key1Pressed = false;
 
         if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && !key2Pressed) {
             currentAlgo = Algorithm::DFS; result = solve(maze, currentAlgo);
             animatedStep = 0; stepTimer = 0.0f; animationDone = false; key2Pressed = true;
-            std::cout << "Algoritmo alterado para: DFS\n";
+            std::cout << "Algoritmo alteredo para: DFS\n";
         } else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_RELEASE) key2Pressed = false;
 
         if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS && !key3Pressed) {
             currentAlgo = Algorithm::ASTAR; result = solve(maze, currentAlgo);
             animatedStep = 0; stepTimer = 0.0f; animationDone = false; key3Pressed = true;
-            std::cout << "Algoritmo alterado para: A*\n";
+            std::cout << "Algoritmo alteredo para: A*\n";
         } else if (glfwGetKey(window, GLFW_KEY_3) == GLFW_RELEASE) key3Pressed = false;
 
         if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !keyRPressed) {
             animatedStep = 0; stepTimer = 0.0f; animationDone = false; keyRPressed = true;
-            std::cout << "Animação reiniciada.\n";
+            std::cout << "Animacao reiniciada.\n";
         } else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) keyRPressed = false;
 
-        // Atualização da lógica da animação
+        // ==========================================
+        // CONTROLE DE VELOCIDADE DA ANIMAÇÃO (Teclas Z e X)
+        // ==========================================
+        if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
+            stepInterval += 0.001f; // Aumenta o tempo de espera (Fica mais LENTO)
+        }
+        if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
+            stepInterval -= 0.001f; // Diminui o tempo de espera (Fica mais RÁPIDO)
+            if (stepInterval < 0.001f) stepInterval = 0.001f; // Limite de velocidade
+        }
+
+        // ==========================================
+        // ATUALIZAÇÃO DA LÓGICA DA ANIMAÇÃO (Fase 1 + Fase 2)
+        // ==========================================
+        size_t totalAnimationSteps = result.visitOrder.size() + result.path.size();
+
         if (!animationDone) {
             stepTimer += deltaTime;
-            while (stepTimer >= stepInterval && animatedStep < result.visitOrder.size()) {
+            while (stepTimer >= stepInterval && animatedStep < totalAnimationSteps) {
                 animatedStep++;
                 stepTimer -= stepInterval;
             }
-            if (animatedStep >= result.visitOrder.size()) {
+            if (animatedStep >= totalAnimationSteps) {
                 animationDone = true;
             }
         }
 
-        // Desenho
-        glClearColor(0.96f, 0.96f, 0.96f, 1.0f); // Fundo cinza claro
-        glClear(GL_COLOR_BUFFER_BIT);
+        // ==========================================
+        // CONTROLES DE CÂMERA LIVRE
+        // ==========================================
+        float cameraSpeed = 90.0f * deltaTime; 
+        
+        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)  renderer.cameraYaw -= cameraSpeed;
+        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) renderer.cameraYaw += cameraSpeed;
+        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)    renderer.cameraPitch += cameraSpeed;
+        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)  renderer.cameraPitch -= cameraSpeed;
+
+        if (renderer.cameraPitch > 89.0f) renderer.cameraPitch = 89.0f;
+        if (renderer.cameraPitch < 1.0f)  renderer.cameraPitch = 1.0f;
+
+        // ==========================================
+        // DESENHO
+        // ==========================================
+        glClearColor(0.2f, 0.2f, 0.25f, 1.0f); 
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         renderer.drawVisited(maze, result, animatedStep);
-        if (animationDone) {
-            renderer.drawPath(maze, result);
-        }
+        renderer.drawPath(maze, result, animatedStep); 
+        
         renderer.drawStartAndGoal(maze);
         renderer.drawMaze(maze);
 
         glfwSwapBuffers(window);
-        glfwPollEvents();
+        glfwPollEvents(); // <- Crucial para processar os inputs e fechar a janela
     }
 
-    glfwTerminate();
+    glfwTerminate(); // <- Finaliza o GLFW corretamente
     return 0;
 }
