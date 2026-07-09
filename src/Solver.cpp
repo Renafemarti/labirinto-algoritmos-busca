@@ -50,11 +50,15 @@ SolveResult bfs(const Maze &maze, int startIdx, int goalIdx) {
 
     frontier.push(startIdx);
     visited[startIdx] = true;
+    result.maxNodesInMemory = 1;
 
     while (!frontier.empty()) {
+        result.iterations++;
+
         int current = frontier.front();
         frontier.pop();
         result.visitOrder.push_back(current);
+        result.nodesExpanded++;
 
         if (current == goalIdx) break;
 
@@ -67,9 +71,13 @@ SolveResult bfs(const Maze &maze, int startIdx, int goalIdx) {
                 frontier.push(next);
             }
         }
+
+        result.maxNodesInMemory = std::max(result.maxNodesInMemory,
+                                            static_cast<int>(frontier.size()));
     }
 
     result.path = reconstructPath(cameFrom, startIdx, goalIdx);
+    result.cost = result.path.empty() ? -1 : static_cast<int>(result.path.size()) - 1;
     return result;
 }
 
@@ -80,14 +88,18 @@ SolveResult dfs(const Maze &maze, int startIdx, int goalIdx) {
     std::vector<int> stack;
 
     stack.push_back(startIdx);
+    result.maxNodesInMemory = 1;
 
     while (!stack.empty()) {
+        result.iterations++;
+
         int current = stack.back();
         stack.pop_back();
 
         if (visited[current]) continue;
         visited[current] = true;
         result.visitOrder.push_back(current);
+        result.nodesExpanded++;
 
         if (current == goalIdx) break;
 
@@ -101,9 +113,13 @@ SolveResult dfs(const Maze &maze, int startIdx, int goalIdx) {
                 stack.push_back(next);
             }
         }
+
+        result.maxNodesInMemory = std::max(result.maxNodesInMemory,
+                                            static_cast<int>(stack.size()));
     }
 
     result.path = reconstructPath(cameFrom, startIdx, goalIdx);
+    result.cost = result.path.empty() ? -1 : static_cast<int>(result.path.size()) - 1;
     return result;
 }
 
@@ -129,8 +145,11 @@ SolveResult astar(const Maze &maze, int startIdx, int goalIdx) {
 
     gScore[startIdx] = 0;
     frontier.push({heuristic(startIdx), startIdx});
+    result.maxNodesInMemory = 1;
 
     while (!frontier.empty()) {
+        result.iterations++;
+
         auto [f, current] = frontier.top();
         (void)f;
         frontier.pop();
@@ -138,6 +157,7 @@ SolveResult astar(const Maze &maze, int startIdx, int goalIdx) {
         if (closed[current]) continue;
         closed[current] = true;
         result.visitOrder.push_back(current);
+        result.nodesExpanded++;
 
         if (current == goalIdx) break;
 
@@ -151,9 +171,13 @@ SolveResult astar(const Maze &maze, int startIdx, int goalIdx) {
                 frontier.push({tentativeG + heuristic(next), next});
             }
         }
+
+        result.maxNodesInMemory = std::max(result.maxNodesInMemory,
+                                            static_cast<int>(frontier.size()));
     }
 
     result.path = reconstructPath(cameFrom, startIdx, goalIdx);
+    result.cost = result.path.empty() ? -1 : gScore[goalIdx];
     return result;
 }
 
