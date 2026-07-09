@@ -38,3 +38,42 @@ Antes de compilar, instale os pacotes de desenvolvimento do GLFW e do OpenGL no 
 ```bash
 sudo apt update
 sudo apt install libglfw3-dev libgl1-mesa-dev xorg-dev
+```
+
+### 2. Dependências extras (Java Swing + JNI)
+
+Além das dependências gráficas acima, esta versão do projeto integra **Java Swing** com o motor em C++ via **JNI (Java Native Interface)**. Para isso é necessário também:
+
+```bash
+sudo apt install openjdk-21-jdk
+sudo apt install libdecor-0-plugin-1-gtk
+```
+
+### 3. Compilando o projeto
+
+**Passo 1 — Compilar o Java e gerar os headers JNI:**
+
+```bash
+javac -h java/headers -d java/build java/src/main/*.java
+```
+
+**Passo 2 — Compilar a biblioteca nativa (C++):**
+
+
+```bash
+g++ -std=c++17 -shared -fPIC \
+    java/native/motor.cpp \
+    src/Maze.cpp src/Renderer.cpp src/Solver.cpp \
+    external/glad/src/glad.c \
+    -Iinclude -Iexternal/glad/include -Ijava/headers \
+    -I/usr/lib/jvm/java-21-openjdk-amd64/include \
+    -I/usr/lib/jvm/java-21-openjdk-amd64/include/linux \
+    -o java/lib/libmotor.so \
+    -lglfw -lGL -ldl
+```
+
+### 4. Executando
+
+```bash
+java --enable-native-access=ALL-UNNAMED -Djava.library.path=java/lib -cp java/build main.Main
+```
