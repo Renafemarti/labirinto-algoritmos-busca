@@ -190,7 +190,12 @@ void Renderer::setupSphere(int sectorCount, int stackCount) {
 void Renderer::applyCameraAndLight() const {
     glUseProgram(shaderProgram);
 
-    float radius = std::max(mazeWidth3D_, mazeDepth3D_) * 1.5f;
+    // Descobre qual é a maior dimensão do labirinto
+    float maxDim = std::max(mazeWidth3D_, mazeDepth3D_);
+    
+    // Calcula um raio de distância dinâmico (1.2f costuma enquadrar perfeitamente)
+    float radius = maxDim * 1.2f; 
+    
     float camX = radius * cos(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch));
     float camY = radius * sin(glm::radians(cameraPitch));
     float camZ = radius * sin(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch));
@@ -200,7 +205,10 @@ void Renderer::applyCameraAndLight() const {
     glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
     glm::mat4 view = glm::lookAt(cameraPos + cameraTarget, cameraTarget, cameraUp);
-    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)screenWidth_ / (float)screenHeight_, 0.1f, 1000.0f);
+    
+    // O campo de visão cresce junto com o labirinto
+    float farPlane = maxDim * 5.0f < 1000.0f ? 1000.0f : maxDim * 5.0f;
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)screenWidth_ / (float)screenHeight_, 0.1f, farPlane);
 
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));

@@ -71,6 +71,22 @@ JNIEXPORT void JNICALL Java_main_MotorGrafico_saveMaze
 JNIEXPORT void JNICALL Java_main_MotorGrafico_cleanup
   (JNIEnv *, jobject);
 
+/*
+ * Class:     main_MotorGrafico
+ * Method:    setPaused
+ * Signature: (Z)V
+ */
+JNIEXPORT void JNICALL Java_main_MotorGrafico_setPaused
+  (JNIEnv *, jobject, jboolean);
+
+/*
+ * Class:     main_MotorGrafico
+ * Method:    stepBack
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_main_MotorGrafico_stepBack
+  (JNIEnv *, jobject);
+
 #ifdef __cplusplus
 }
 #endif

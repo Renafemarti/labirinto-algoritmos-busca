@@ -36,4 +36,7 @@ public class MotorGrafico {
 
     // Libera os recursos do OpenGL e fecha a janela.
     public native void cleanup();
+
+    public native void setPaused(boolean paused);
+    public native void stepBack();
 }

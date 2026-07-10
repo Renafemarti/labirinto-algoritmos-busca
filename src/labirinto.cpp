@@ -183,9 +183,9 @@ int main() {
         renderer.drawMaze(maze);
 
         glfwSwapBuffers(window);
-        glfwPollEvents(); // <- Crucial para processar os inputs e fechar a janela
+        glfwPollEvents(); // processar os inputs e fechar a janela
     }
 
-    glfwTerminate(); // <- Finaliza o GLFW corretamente
+    glfwTerminate();
     return 0;
 }

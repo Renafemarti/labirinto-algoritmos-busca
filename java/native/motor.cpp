@@ -48,6 +48,10 @@ std::atomic<bool> g_requestSave{false};
 std::mutex g_savePathMutex;
 std::string g_savePath;
 
+// pause e volta
+std::atomic<bool> g_isPaused{false};
+std::atomic<bool> g_requestStepBack{false};
+
 Algorithm algorithmFromId(int id) {
     switch (id) {
         case 0: return Algorithm::BFS;
@@ -219,7 +223,16 @@ JNIEXPORT void JNICALL Java_main_MotorGrafico_init
         size_t totalAnimationSteps = result.visitOrder.size() + result.path.size();
         float interval = g_stepInterval.load();
 
-        if (!animationDone) {
+        // VOLTAR um passo (ocorre instantaneamente)
+        if (g_requestStepBack.exchange(false)) {
+            if (animatedStep > 0) {
+                animatedStep--;
+                animationDone = false; 
+            }
+        }
+
+        // AVANÇAR e TOCAR (só roda se não estiver pausado)
+        if (!g_isPaused.load() && !animationDone) {
             stepTimer += deltaTime;
             while (stepTimer >= interval && animatedStep < totalAnimationSteps) {
                 animatedStep++;
@@ -302,4 +315,14 @@ JNIEXPORT void JNICALL Java_main_MotorGrafico_cleanup
     if (window) {
         glfwSetWindowShouldClose(window, true);
     }
+  }
+
+JNIEXPORT void JNICALL Java_main_MotorGrafico_setPaused
+  (JNIEnv *, jobject, jboolean paused) {
+    g_isPaused.store(paused);
+}
+
+JNIEXPORT void JNICALL Java_main_MotorGrafico_stepBack
+  (JNIEnv *, jobject) {
+    g_requestStepBack.store(true);
 }

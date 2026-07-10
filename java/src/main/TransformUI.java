@@ -82,8 +82,8 @@ public class TransformUI extends JFrame {
         return panel;
     }
 
-    private JPanel createAcoesPanel() {
-        JPanel panel = new JPanel(new GridLayout(3, 1, 4, 4));
+private JPanel createAcoesPanel() {
+        JPanel panel = new JPanel(new GridLayout(5, 1, 4, 4));
 
         JButton novoLabirintoBtn = new JButton("Novo Labirinto");
         novoLabirintoBtn.addActionListener(e -> motor.generateNewMaze());
@@ -91,12 +91,25 @@ public class TransformUI extends JFrame {
         JButton reiniciarBtn = new JButton("Reiniciar Animacao");
         reiniciarBtn.addActionListener(e -> motor.resetAnimation());
 
+        JButton voltarBtn = new JButton("Voltar Passo");
+        voltarBtn.addActionListener(e -> motor.stepBack());
+
+        JButton pausarBtn = new JButton("Pausar");
+        pausarBtn.addActionListener(e -> {
+            boolean pausar = pausarBtn.getText().equals("Pausar");
+            motor.setPaused(pausar);
+            pausarBtn.setText(pausar ? "Continuar" : "Pausar");
+        });
+
         JButton salvarBtn = new JButton("Salvar Labirinto e Estatisticas");
         salvarBtn.addActionListener(e -> onSalvarLabirinto());
 
         panel.add(novoLabirintoBtn);
         panel.add(reiniciarBtn);
+        panel.add(voltarBtn);
+        panel.add(pausarBtn);
         panel.add(salvarBtn);
+        
         return panel;
     }
 
