@@ -20,7 +20,7 @@ public class TransformUI extends JFrame {
         this.motor = motor;
 
         setTitle("Simulador de Labirinto - Controles");
-        setSize(360, 460);
+        setSize(600, 460);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout(8, 8));
 
@@ -37,22 +37,28 @@ public class TransformUI extends JFrame {
         });
     }
 
-    private JPanel createAlgoritmoPanel() {
+private JPanel createAlgoritmoPanel() {
         JPanel panel = new JPanel(new GridLayout(2, 1));
         panel.setBorder(BorderFactory.createTitledBorder("Algoritmo de Busca"));
 
-        JPanel botoes = new JPanel(new GridLayout(1, 3, 4, 4));
+        JPanel botoes = new JPanel(new GridLayout(1, 5, 4, 4));
         JButton bfsBtn = new JButton("BFS");
         JButton dfsBtn = new JButton("DFS");
         JButton astarBtn = new JButton("A*");
+        JButton dijkstraBtn = new JButton("Dijkstra");
+        JButton gulosaBtn = new JButton("Gulosa (GBS)");
 
         bfsBtn.addActionListener(e -> motor.setAlgorithm(0));
         dfsBtn.addActionListener(e -> motor.setAlgorithm(1));
         astarBtn.addActionListener(e -> motor.setAlgorithm(2));
+        dijkstraBtn.addActionListener(e -> motor.setAlgorithm(3));
+        gulosaBtn.addActionListener(e -> motor.setAlgorithm(4));
 
         botoes.add(bfsBtn);
         botoes.add(dfsBtn);
         botoes.add(astarBtn);
+        botoes.add(dijkstraBtn);
+        botoes.add(gulosaBtn);
 
         panel.add(new JLabel("Escolha o algoritmo:"));
         panel.add(botoes);
@@ -135,10 +141,11 @@ private JPanel createAcoesPanel() {
             motor.saveMaze(arquivo.getAbsolutePath());
 
             JOptionPane.showMessageDialog(this,
-                    "Labirinto e estatisticas salvos em:\n" + arquivo.getAbsolutePath()
-                            + "\n\nDica: rode outro algoritmo (BFS/DFS/A*) e salve de novo\n"
-                            + "no MESMO arquivo para acumular as estatisticas de todos\n"
-                            + "para comparacao posterior.",
+                    "Labirinto e estatisticas de TODOS os algoritmos (BFS, DFS, A*,\n"
+                            + "Dijkstra e Busca Gulosa) foram salvos em:\n" + arquivo.getAbsolutePath()
+                            + "\n\nNao e preciso rodar cada algoritmo manualmente antes de\n"
+                            + "salvar: o simulador ja calcula e grava as estatisticas de\n"
+                            + "todos eles automaticamente para este labirinto.",
                     "Salvo com sucesso",
                     JOptionPane.INFORMATION_MESSAGE);
         }

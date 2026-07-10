@@ -74,17 +74,40 @@ public class LauncherUI extends JFrame {
         chooser.setDialogTitle("Selecione um labirinto salvo");
         int escolha = chooser.showOpenDialog(this);
 
-        if (escolha == JFileChooser.APPROVE_OPTION) {
-            File arquivo = chooser.getSelectedFile();
-            // TODO: carregar labirinto a partir do arquivo
-            // ainda nao esta implementada.
+        if (escolha != JFileChooser.APPROVE_OPTION) return;
+
+        File arquivo = chooser.getSelectedFile();
+        String caminho = arquivo.getAbsolutePath();
+
+        MotorGrafico motor = new MotorGrafico();
+
+        boolean valido = motor.validateMazeFile(caminho);
+        if (!valido) {
             JOptionPane.showMessageDialog(this,
-                    "Carregamento de labirinto salvo ainda nao implementado.\n"
-                            + "Arquivo selecionado: " + arquivo.getAbsolutePath(),
-                    "Em desenvolvimento",
-                    JOptionPane.INFORMATION_MESSAGE);
+                    "O arquivo selecionado nao esta no formato correto de labirinto salvo:\n"
+                            + caminho
+                            + "\n\nCertifique-se de escolher um arquivo gerado pelo botao\n"
+                            + "\"Salvar Labirinto e Estatisticas\" da tela de controles.",
+                    "Arquivo invalido",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
         }
+
+        Thread glThread = new Thread(() -> motor.initFromFile(caminho), "OpenGL-Thread");
+        glThread.setDaemon(true);
+        glThread.start();
+
+        abrirControlesEFecharLauncher(motor);
     }
+
+    private void abrirControlesEFecharLauncher(MotorGrafico motor) {
+        SwingUtilities.invokeLater(() -> {
+            TransformUI ui = new TransformUI(motor);
+            ui.setVisible(true);
+        });
+        dispose(); // fecha a tela de lancamento
+    }
+
 
     private void onGerarLabirinto() {
         int largura = (Integer) spinnerLargura.getValue();

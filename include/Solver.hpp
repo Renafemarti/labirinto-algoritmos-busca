@@ -2,7 +2,12 @@
 #include <vector>
 #include "Maze.hpp"
 
-enum class Algorithm { BFS, DFS, ASTAR };
+// BFS      - Busca em Largura
+// DFS      - Busca em Profundidade
+// ASTAR    - A* (g + heurística Manhattan)
+// DIJKSTRA - Dijkstra (custo uniforme, sem heurística; equivalente a UCS)
+// GREEDY   - Busca Gulosa / Greedy Best-First Search (apenas heurística)
+enum class Algorithm { BFS, DFS, ASTAR, DIJKSTRA, GREEDY };
 
 // Resultado completo de uma busca, guardado passo a passo para permitir
 // animação: 'visitOrder' é a ordem em que os nós foram explorados (isso
