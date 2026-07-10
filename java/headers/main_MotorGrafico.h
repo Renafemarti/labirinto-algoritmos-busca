@@ -103,6 +103,14 @@ JNIEXPORT void JNICALL Java_main_MotorGrafico_setPaused
 JNIEXPORT void JNICALL Java_main_MotorGrafico_stepBack
   (JNIEnv *, jobject);
 
+/*
+ * Class:     main_MotorGrafico
+ * Method:    getStatistics
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_main_MotorGrafico_getStatistics
+  (JNIEnv *, jobject);
+
 #ifdef __cplusplus
 }
 #endif

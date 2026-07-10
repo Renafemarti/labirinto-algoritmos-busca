@@ -50,4 +50,6 @@ public class MotorGrafico {
 
     public native void setPaused(boolean paused);
     public native void stepBack();
+
+    public native String getStatistics();
 }
