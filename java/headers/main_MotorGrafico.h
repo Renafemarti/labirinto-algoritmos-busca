@@ -17,6 +17,22 @@ JNIEXPORT void JNICALL Java_main_MotorGrafico_init
 
 /*
  * Class:     main_MotorGrafico
+ * Method:    validateMazeFile
+ * Signature: (Ljava/lang/String;)Z
+ */
+JNIEXPORT jboolean JNICALL Java_main_MotorGrafico_validateMazeFile
+  (JNIEnv *, jobject, jstring);
+
+/*
+ * Class:     main_MotorGrafico
+ * Method:    initFromFile
+ * Signature: (Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_main_MotorGrafico_initFromFile
+  (JNIEnv *, jobject, jstring);
+
+/*
+ * Class:     main_MotorGrafico
  * Method:    generateNewMaze
  * Signature: ()V
  */

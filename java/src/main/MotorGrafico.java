@@ -10,6 +10,17 @@ public class MotorGrafico {
     // renderização. Deve ser chamado em uma thread separada da EDT.
     public native void init(int mazeWidth, int mazeHeight);
 
+    // Verifica (rapidamente, sem abrir janela) se o arquivo indicado
+    // esta no formato correto de labirinto salvo (gerado por saveMaze).
+    // Retorna true se for valido.
+    public native boolean validateMazeFile(String filePath);
+
+    // Inicia GLFW + GLAD e carrega o labirinto EXATAMENTE como esta no
+    // arquivo indicado (sem gerar um novo). So deve ser chamado depois
+    // que validateMazeFile() retornou true. Deve ser chamado em uma
+    // thread separada da EDT, assim como init().
+    public native void initFromFile(String filePath);
+
     // Gera um novo labirinto (novo layout) e reseta a animação/solução.
     public native void generateNewMaze();
 

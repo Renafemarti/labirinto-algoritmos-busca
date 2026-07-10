@@ -181,6 +181,111 @@ SolveResult astar(const Maze &maze, int startIdx, int goalIdx) {
     return result;
 }
 
+SolveResult dijkstra(const Maze &maze, int startIdx, int goalIdx) {
+    SolveResult result;
+
+    using QueueEntry = std::pair<int, int>; // (gScore, index)
+    std::priority_queue<QueueEntry, std::vector<QueueEntry>, std::greater<>> frontier;
+
+    std::vector<int> gScore(static_cast<size_t>(maze.width()) * maze.height(),
+                             std::numeric_limits<int>::max());
+    std::vector<bool> closed(gScore.size(), false);
+    std::unordered_map<int, int> cameFrom;
+
+    gScore[startIdx] = 0;
+    frontier.push({0, startIdx});
+    result.maxNodesInMemory = 1;
+
+    while (!frontier.empty()) {
+        result.iterations++;
+
+        auto [g, current] = frontier.top();
+        (void)g;
+        frontier.pop();
+
+        if (closed[current]) continue;
+        closed[current] = true;
+        result.visitOrder.push_back(current);
+        result.nodesExpanded++;
+
+        if (current == goalIdx) break;
+
+        int x = current % maze.width();
+        int y = current / maze.width();
+        for (int next : neighbors(maze, x, y)) {
+            int tentativeG = gScore[current] + 1; // custo uniforme por passo
+            if (tentativeG < gScore[next]) {
+                gScore[next] = tentativeG;
+                cameFrom[next] = current;
+                frontier.push({tentativeG, next});
+            }
+        }
+
+        result.maxNodesInMemory = std::max(result.maxNodesInMemory,
+                                            static_cast<int>(frontier.size()));
+    }
+
+    result.path = reconstructPath(cameFrom, startIdx, goalIdx);
+    result.cost = result.path.empty() ? -1 : gScore[goalIdx];
+    return result;
+}
+
+// Busca Gulosa (Greedy Best-First Search): expande sempre o nó com menor
+// heurística h(n) até o objetivo, ignorando o custo já percorrido g(n).
+// É mais rápida que A*, mas não garante o caminho mais curto.
+SolveResult greedy(const Maze &maze, int startIdx, int goalIdx) {
+    SolveResult result;
+
+    auto heuristic = [&](int idx) {
+        int x = idx % maze.width();
+        int y = idx / maze.width();
+        int gx = goalIdx % maze.width();
+        int gy = goalIdx / maze.width();
+        return std::abs(x - gx) + std::abs(y - gy);
+    };
+
+    using QueueEntry = std::pair<int, int>; // (hScore, index)
+    std::priority_queue<QueueEntry, std::vector<QueueEntry>, std::greater<>> frontier;
+
+    std::vector<bool> visited(static_cast<size_t>(maze.width()) * maze.height(), false);
+    std::unordered_map<int, int> cameFrom;
+
+    frontier.push({heuristic(startIdx), startIdx});
+    visited[startIdx] = true;
+    result.maxNodesInMemory = 1;
+
+    while (!frontier.empty()) {
+        result.iterations++;
+
+        auto [h, current] = frontier.top();
+        (void)h;
+        frontier.pop();
+
+        result.visitOrder.push_back(current);
+        result.nodesExpanded++;
+
+        if (current == goalIdx) break;
+
+        int x = current % maze.width();
+        int y = current / maze.width();
+        for (int next : neighbors(maze, x, y)) {
+            if (!visited[next]) {
+                visited[next] = true;
+                cameFrom[next] = current;
+                frontier.push({heuristic(next), next});
+            }
+        }
+
+        result.maxNodesInMemory = std::max(result.maxNodesInMemory,
+                                            static_cast<int>(frontier.size()));
+    }
+
+    // Custo real do caminho encontrado (a busca gulosa não garante ser o menor).
+    result.path = reconstructPath(cameFrom, startIdx, goalIdx);
+    result.cost = result.path.empty() ? -1 : static_cast<int>(result.path.size()) - 1;
+    return result;
+}
+
 } // namespace
 
 SolveResult solve(const Maze &maze, Algorithm algo) {
@@ -193,6 +298,8 @@ SolveResult solve(const Maze &maze, Algorithm algo) {
         case Algorithm::BFS:   return bfs(maze, startIdx, goalIdx);
         case Algorithm::DFS:   return dfs(maze, startIdx, goalIdx);
         case Algorithm::ASTAR: return astar(maze, startIdx, goalIdx);
+        case Algorithm::DIJKSTRA: return dijkstra(maze, startIdx, goalIdx);
+        case Algorithm::GREEDY: return greedy(maze, startIdx, goalIdx);
     }
     return {};
 }

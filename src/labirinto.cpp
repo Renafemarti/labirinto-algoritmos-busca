@@ -16,6 +16,8 @@ namespace {
             case Algorithm::BFS:   return "BFS";
             case Algorithm::DFS:   return "DFS";
             case Algorithm::ASTAR: return "A*";
+            case Algorithm::DIJKSTRA: return "Dijkstra";
+            case Algorithm::GREEDY: return "Busca Gulosa (GBS)";
         }
         return "?";
     }
@@ -79,11 +81,12 @@ int main() {
     float lastFrameTime = glfwGetTime();
     float stepTimer = 0.0f;
 
-    bool spacePressed = false, key1Pressed = false, key2Pressed = false, key3Pressed = false, keyRPressed = false;
+    bool spacePressed = false, key1Pressed = false, key2Pressed = false, key3Pressed = false,
+         key4Pressed = false, key5Pressed = false, keyRPressed = false;
 
     // Imprime as instruções iniciais no terminal do Linux/VSCode
     std::cout << "--- CONTROLES DO SIMULADOR ---\n";
-    std::cout << "[1] BFS | [2] DFS | [3] A*\n";
+    std::cout << "[1] BFS | [2] DFS | [3] A* | [4] Dijkstra | [5] Busca Gulosa (GBS)\n";
     std::cout << "[ESPACO] Novo Labirinto | [R] Repetir Animacao\n";
     std::cout << "[Z] Mais Lento | [X] Mais Rapido\n";
     std::cout << "[SETAS] Mover Camera Livremente\n";
@@ -124,6 +127,18 @@ int main() {
             animatedStep = 0; stepTimer = 0.0f; animationDone = false; key3Pressed = true;
             std::cout << "Algoritmo alteredo para: A*\n";
         } else if (glfwGetKey(window, GLFW_KEY_3) == GLFW_RELEASE) key3Pressed = false;
+
+        if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS && !key4Pressed) {
+            currentAlgo = Algorithm::DIJKSTRA; result = solve(maze, currentAlgo);
+            animatedStep = 0; stepTimer = 0.0f; animationDone = false; key4Pressed = true;
+            std::cout << "Algoritmo alterado para: Dijkstra\n";
+        } else if (glfwGetKey(window, GLFW_KEY_4) == GLFW_RELEASE) key4Pressed = false;
+
+        if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS && !key5Pressed) {
+            currentAlgo = Algorithm::GREEDY; result = solve(maze, currentAlgo);
+            animatedStep = 0; stepTimer = 0.0f; animationDone = false; key5Pressed = true;
+            std::cout << "Algoritmo alterado para: Busca Gulosa (GBS)\n";
+        } else if (glfwGetKey(window, GLFW_KEY_5) == GLFW_RELEASE) key5Pressed = false;
 
         if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !keyRPressed) {
             animatedStep = 0; stepTimer = 0.0f; animationDone = false; keyRPressed = true;
