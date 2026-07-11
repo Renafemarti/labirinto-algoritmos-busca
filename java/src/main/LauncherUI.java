@@ -25,7 +25,7 @@ public class LauncherUI extends JFrame {
 
     public LauncherUI() {
         setTitle("Simulador de Labirinto");
-        setSize(540, 450);
+        setSize(600, 450);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
