@@ -89,7 +89,7 @@ private JPanel createAlgoritmoPanel() {
     }
 
 private JPanel createAcoesPanel() {
-        JPanel panel = new JPanel(new GridLayout(5, 1, 4, 4));
+        JPanel panel = new JPanel(new GridLayout(6, 1, 4, 4));
 
         JButton novoLabirintoBtn = new JButton("Novo Labirinto");
         novoLabirintoBtn.addActionListener(e -> motor.generateNewMaze());
@@ -110,13 +110,21 @@ private JPanel createAcoesPanel() {
         JButton salvarBtn = new JButton("Salvar Labirinto e Estatisticas");
         salvarBtn.addActionListener(e -> onSalvarLabirinto());
 
+        JButton estatisticasBtn = new JButton("Estatisticas");
+        estatisticasBtn.addActionListener(e -> onAbrirEstatisticas());
+
         panel.add(novoLabirintoBtn);
         panel.add(reiniciarBtn);
         panel.add(voltarBtn);
         panel.add(pausarBtn);
         panel.add(salvarBtn);
+        panel.add(estatisticasBtn);
         
         return panel;
+    }
+    private void onAbrirEstatisticas() {
+        EstatisticasUI estatisticas = new EstatisticasUI(motor);
+        estatisticas.setVisible(true);
     }
 
     private JPanel createSliderPanel(String title, JSlider slider) {
