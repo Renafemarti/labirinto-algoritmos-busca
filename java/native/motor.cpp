@@ -103,8 +103,24 @@ std::atomic<float> g_cameraPitch{45.0f};
 
 std::atomic<bool> g_requestNewMaze{false};
 std::atomic<bool> g_requestReset{false};
+
+// Algoritmo de GERACAO do labirinto usado na proxima vez que um labirinto
+// novo for criado (init() ou "Novo Labirinto"/generateNewMaze()). Guardado
+// como int (mesma convencao usada para os algoritmos de busca): 0 =
+// Recursive Backtracking, 1 = Prim, 2 = Kruskal. Nao afeta labirintos
+// carregados de arquivo (initFromFile), que ja vem prontos.
+std::atomic<int> g_mazeAlgorithm{0};
+
 std::atomic<int> g_requestAlgorithm{-1}; // -1 = nenhuma solicitacao pendente
 std::atomic<bool> g_shouldClose{false};
+
+// Fica 'true' do inicio de runRenderLoop() ate o final de teardown().
+// Java_main_MotorGrafico_cleanup espera esta flag virar 'false' antes de
+// devolver o controle para quem chamou: sem isso, era possivel abrir um
+// SEGUNDO MotorGrafico (voltar ao menu -> gerar novo labirinto) enquanto
+// a thread OpenGL antiga ainda estava destruindo a janela GLFW/X11,
+// causando corrupcao de memoria (SIGSEGV / "corrupted double-linked list").
+std::atomic<bool> g_engineActive{false};
 
 std::atomic<bool> g_requestSave{false};
 std::mutex g_savePathMutex;
@@ -135,6 +151,15 @@ Algorithm algorithmFromId(int id) {
     }
 }
 
+MazeAlgorithm mazeAlgorithmFromId(int id) {
+    switch (id) {
+        case 0: return MazeAlgorithm::RECURSIVE_BACKTRACKING;
+        case 1: return MazeAlgorithm::PRIM;
+        case 2: return MazeAlgorithm::KRUSKAL;
+        default: return MazeAlgorithm::RECURSIVE_BACKTRACKING;
+    }
+}
+
 const char *algorithmName(Algorithm algo) {
     switch (algo) {
         case Algorithm::BFS:      return "BFS";
@@ -151,6 +176,30 @@ void resolveAndResetAnimation() {
     animatedStep = 0;
     stepTimer = 0.0f;
     animationDone = false;
+}
+
+// -----------------------------------------------------------------
+// Zera todas as flags/solicitacoes pendentes antes de comecar um novo
+// motor (init()/initFromFile()). Necessario porque essas variaveis sao
+// globais do processo/da .so — sem resetar, um MotorGrafico criado
+// depois de "Voltar ao Menu" herdaria o estado (ex: g_shouldClose ainda
+// 'true') deixado pela instancia anterior e fecharia a janela sozinho
+// ou se comportaria de forma inconsistente.
+// -----------------------------------------------------------------
+void resetEngineState() {
+    g_shouldClose.store(false);
+    g_requestNewMaze.store(false);
+    g_requestReset.store(false);
+    g_requestAlgorithm.store(-1);
+    g_requestSave.store(false);
+    g_requestStats.store(false);
+    g_statsReady.store(false);
+    g_requestStepBack.store(false);
+    g_isPaused.store(false);
+    g_cameraZoom.store(1.0f);
+    g_cameraYaw.store(45.0f);
+    g_cameraPitch.store(45.0f);
+    g_requestResize.store(false);
 }
 
 // -----------------------------------------------------------------
@@ -273,7 +322,7 @@ void saveMazeAndStatsToFile(const std::string &path) {
         out << "algoritmo=" << algorithmName(algo) << "\n";
         out << "custo=" << r.cost << "\n";
         out << "nos_expandidos=" << r.nodesExpanded << "\n";
-        out << "max_nos_memoria=" << r.maxNodesInMemory << "\n";
+        out << "tempo_ms=" << r.executionTimeMs << "\n";
         out << "iteracoes=" << r.iterations << "\n";
         out << "\n";
     }
@@ -286,7 +335,7 @@ void saveMazeAndStatsToFile(const std::string &path) {
 // -----------------------------------------------------------------
 // Roda os 5 algoritmos no labirinto atual e monta uma string com uma
 // linha por algoritmo, no formato:
-//   nome;custo;nos_expandidos;max_nos_memoria;iteracoes
+//   nome;custo;nos_expandidos;tempo_ms;iteracoes
 // E' esse texto que a EstatisticasUI (Java) faz o parse para desenhar
 // o grafico de barras. Nao mexe no 'result'/'currentAlgo' que estao
 // sendo animados na tela.
@@ -305,7 +354,7 @@ std::string computeStatisticsText() {
         out << algorithmName(algo) << ";"
             << r.cost << ";"
             << r.nodesExpanded << ";"
-            << r.maxNodesInMemory << ";"
+            << r.executionTimeMs << ";"
             << r.iterations << "\n";
     }
     return out.str();
@@ -497,6 +546,8 @@ bool embedIntoCanvas(JNIEnv *env, jobject canvasObj) {
 // (pelo X ou por cleanup()). Compartilhado entre init() e initFromFile().
 // -----------------------------------------------------------------
 void runRenderLoop() {
+    g_engineActive.store(true);
+
     float lastFrameTime = static_cast<float>(glfwGetTime());
 
     while (!glfwWindowShouldClose(window) && !g_shouldClose.load()) {
@@ -524,7 +575,7 @@ void runRenderLoop() {
 
         // --- processa solicitacoes vindas da interface Swing ---
         if (g_requestNewMaze.exchange(false)) {
-            maze->generate();
+            maze->generate(0, mazeAlgorithmFromId(g_mazeAlgorithm.load()));
             renderer->computeCellSize(*maze);
             resolveAndResetAnimation();
         }
@@ -611,6 +662,13 @@ void teardown() {
         window = nullptr;
     }
     glfwTerminate();
+    g_x11Display = nullptr;
+
+    // So agora, com GLFW/X11 totalmente desligados, e seguro para um
+    // novo MotorGrafico (novo init()/initFromFile() em outra thread)
+    // comecar. Ver Java_main_MotorGrafico_cleanup, que fica esperando
+    // esta flag virar 'false'.
+    g_engineActive.store(false);
 }
 
 } // namespace
@@ -622,10 +680,12 @@ void teardown() {
 JNIEXPORT void JNICALL Java_main_MotorGrafico_init
   (JNIEnv *env, jobject, jobject canvas, jint mazeWidth, jint mazeHeight) {
 
+    resetEngineState();
+
     if (!embedIntoCanvas(env, canvas)) return;
 
     maze = new Maze(mazeWidth, mazeHeight);
-    maze->generate();
+    maze->generate(0, mazeAlgorithmFromId(g_mazeAlgorithm.load()));
 
     renderer = new Renderer(g_embedWidth, g_embedHeight);
     renderer->computeCellSize(*maze);
@@ -665,6 +725,8 @@ JNIEXPORT jboolean JNICALL Java_main_MotorGrafico_validateMazeFile
 // ---------------------------------------------------------------------
 JNIEXPORT void JNICALL Java_main_MotorGrafico_initFromFile
   (JNIEnv *env, jobject, jobject canvas, jstring filePath) {
+
+    resetEngineState();
 
     const char *pathChars = env->GetStringUTFChars(filePath, nullptr);
     std::string path(pathChars);
@@ -711,6 +773,19 @@ JNIEXPORT void JNICALL Java_main_MotorGrafico_generateNewMaze
 JNIEXPORT void JNICALL Java_main_MotorGrafico_setAlgorithm
   (JNIEnv *, jobject, jint algorithmId) {
     g_requestAlgorithm.store(algorithmId);
+}
+
+// ---------------------------------------------------------------------
+// Java_main_MotorGrafico_setMazeAlgorithm
+// Define qual algoritmo de GERACAO sera usado na proxima vez que um
+// labirinto novo for criado (botao "Novo Labirinto" ou o proximo
+// init()). Diferente de setAlgorithm() (busca), aqui NAO ha
+// regeneracao automatica: o labirinto atual continua na tela ate o
+// usuario pedir um novo.
+// ---------------------------------------------------------------------
+JNIEXPORT void JNICALL Java_main_MotorGrafico_setMazeAlgorithm
+  (JNIEnv *, jobject, jint mazeAlgorithmId) {
+    g_mazeAlgorithm.store(mazeAlgorithmId);
 }
 
 JNIEXPORT void JNICALL Java_main_MotorGrafico_resetAnimation
@@ -762,6 +837,19 @@ JNIEXPORT void JNICALL Java_main_MotorGrafico_cleanup
     g_shouldClose.store(true);
     if (window) {
         glfwSetWindowShouldClose(window, true);
+    }
+
+    // Espera a OpenGL-Thread realmente sair do runRenderLoop() e terminar
+    // o teardown() (destruir janela GLFW, glfwTerminate(), etc.) antes de
+    // devolver o controle para quem chamou cleanup(). Isso e essencial
+    // para o fluxo "Voltar ao Menu": sem essa espera, o usuario podia
+    // clicar em "Gerar Labirinto" e comecar um SEGUNDO motor (nova thread
+    // OpenGL) enquanto o primeiro ainda estava destruindo GLFW/X11 —
+    // duas threads mexendo no mesmo estado global do GLFW/X11 ao mesmo
+    // tempo, causando corrupcao de memoria (SIGSEGV / "corrupted
+    // double-linked list" / crash dentro de libX11).
+    while (g_engineActive.load()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 }
 JNIEXPORT void JNICALL Java_main_MotorGrafico_setPaused

@@ -10,6 +10,11 @@ public class Main {
         // So depois de clicar em "Gerar Labirinto" e que a janela OpenGL e
         // os controles (TransformUI) sao criados.
         SwingUtilities.invokeLater(() -> {
+            // Aplica a paleta de cores e a fonte padrao (ver UITheme) antes
+            // de qualquer janela ser criada, para que TODAS as telas
+            // (LauncherUI, TransformUI, EstatisticasUI) nasçam consistentes.
+            UITheme.applyGlobalDefaults();
+
             LauncherUI launcher = new LauncherUI();
             launcher.setVisible(true);
         });

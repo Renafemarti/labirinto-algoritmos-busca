@@ -21,6 +21,8 @@ enum class Algorithm { BFS, DFS, ASTAR, DIJKSTRA, GREEDY };
 //   - maxNodesInMemory: maior quantidade de nós na fronteira/pilha/fila
 //                        durante toda a busca (uso de memória)
 //   - iterations:       número de iterações do laço principal da busca
+//   - executionTimeMs:  tempo de execução do algoritmo, em milissegundos
+//                        (medido em solve(), envolvendo só o algoritmo em si)
 struct SolveResult {
     std::vector<int> visitOrder; // índices de célula (Maze::index) na ordem de exploração
     std::vector<int> path;       // índices de célula do start até o goal, em ordem
@@ -32,6 +34,7 @@ struct SolveResult {
     int nodesExpanded = 0;
     int maxNodesInMemory = 0;
     int iterations = 0;
+    double executionTimeMs = 0.0;
 };
 
 // Executa o algoritmo escolhido do início ao fim e devolve o resultado

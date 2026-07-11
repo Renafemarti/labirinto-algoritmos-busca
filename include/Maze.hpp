@@ -6,6 +6,7 @@
 // Direções cardeais usadas como índice de parede/vizinho.
 // A ordem é fixa: Norte, Leste, Sul, Oeste.
 enum Direction : int { NORTH = 0, EAST = 1, SOUTH = 2, WEST = 3 };
+enum class MazeAlgorithm { RECURSIVE_BACKTRACKING, PRIM, KRUSKAL };
 
 struct Cell {
     // walls[NORTH], walls[EAST], walls[SOUTH], walls[WEST]
@@ -21,10 +22,12 @@ class Maze {
 public:
     Maze(int width, int height);
 
-    // Gera um labirinto perfeito (sem loops, sempre solúvel) usando
-    // o algoritmo de "recursive backtracking" (busca em profundidade
-    // com pilha explícita, evitando estouro de pilha em labirintos grandes).
-    void generate(unsigned int seed = 0);
+    // Gera um labirinto perfeito (sem loops, sempre solúvel) usando o
+    // algoritmo escolhido em 'algo' (ver MazeAlgorithm acima). Por
+    // compatibilidade com o codigo existente, o padrao continua sendo
+    // recursive backtracking.
+    void generate(unsigned int seed = 0,
+                  MazeAlgorithm algo = MazeAlgorithm::RECURSIVE_BACKTRACKING);
 
     int width() const { return width_; }
     int height() const { return height_; }
@@ -51,4 +54,12 @@ private:
     std::vector<Cell> cells_;
 
     void removeWallBetween(int x1, int y1, int x2, int y2);
+
+    // Uma implementacao por algoritmo de geracao. Cada uma assume que
+    // 'cells_' ja foi resetado (todas as paredes presentes, visited=false)
+    // por generate() antes de ser chamada, e recebe a semente ja pronta
+    // para uso (evita depender do tipo std::mt19937 aqui no header).
+    void generateRecursiveBacktracking(unsigned int seed);
+    void generatePrim(unsigned int seed);
+    void generateKruskal(unsigned int seed);
 };

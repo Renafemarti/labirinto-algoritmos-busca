@@ -41,7 +41,14 @@ public class MotorGrafico {
     public native void resizeViewport(int width, int height);
 
     // Gera um novo labirinto (novo layout) e reseta a animação/solução.
+    // Usa o algoritmo de GERACAO selecionado por setMazeAlgorithm().
     public native void generateNewMaze();
+
+    // Seleciona o algoritmo de GERACAO do labirinto: 0 = Recursive
+    // Backtracking, 1 = Prim, 2 = Kruskal. So tem efeito no proximo
+    // labirinto criado (init() ou generateNewMaze()) — nao regenera o
+    // labirinto atual na hora, diferente de setAlgorithm() (busca).
+    public native void setMazeAlgorithm(int mazeAlgorithmId);
 
     // Seleciona o algoritmo de busca: 0 = BFS, 1 = DFS, 2 = A*.
     // Já resolve o labirinto novamente e reinicia a animação.

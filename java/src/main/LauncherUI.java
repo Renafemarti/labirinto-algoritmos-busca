@@ -13,55 +13,93 @@ public class LauncherUI extends JFrame {
     private static final int DEFAULT_WIDTH = 25;
     private static final int DEFAULT_HEIGHT = 20;
 
+    // Opcoes exibidas no combo, na mesma ordem dos ids esperados por
+    // MotorGrafico.setMazeAlgorithm() (0, 1, 2 - ver motor.cpp).
+    private static final String[] ALGORITMOS_GERACAO = {
+            "Recursive Backtracking", "Prim", "Kruskal"
+    };
+
     private JSpinner spinnerLargura;
     private JSpinner spinnerAltura;
+    private JComboBox<String> comboAlgoritmoGeracao;
 
     public LauncherUI() {
         setTitle("Simulador de Labirinto");
-        setSize(340, 260);
+        setSize(340, 340);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
 
         JPanel content = new JPanel(new BorderLayout(10, 10));
         content.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        content.setBackground(UITheme.BG);
         setContentPane(content);
 
+        JPanel centro = new JPanel(new BorderLayout(10, 10));
+        centro.setBackground(UITheme.BG);
+        centro.add(createCamposTamanho(), BorderLayout.NORTH);
+        centro.add(createCampoAlgoritmoGeracao(), BorderLayout.SOUTH);
+
         content.add(createTitulo(), BorderLayout.NORTH);
-        content.add(createCamposTamanho(), BorderLayout.CENTER);
+        content.add(centro, BorderLayout.CENTER);
         content.add(createBotoes(), BorderLayout.SOUTH);
     }
 
     private JLabel createTitulo() {
         JLabel titulo = new JLabel("Configuracoes do Labirinto", SwingConstants.CENTER);
-        titulo.setFont(titulo.getFont().deriveFont(Font.BOLD, 16f));
+        titulo.setFont(UITheme.FONT_TITLE);
+        titulo.setForeground(UITheme.TEXT_PRIMARY);
         return titulo;
     }
 
     private JPanel createCamposTamanho() {
         JPanel panel = new JPanel(new GridLayout(2, 2, 8, 12));
-        panel.setBorder(BorderFactory.createTitledBorder("Tamanho (em blocos)"));
+        panel.setBackground(UITheme.BG);
+        panel.setBorder(UITheme.titledBorder("Tamanho (em blocos)"));
 
         spinnerLargura = new JSpinner(
                 new SpinnerNumberModel(DEFAULT_WIDTH, MIN_SIZE, MAX_SIZE, 1));
         spinnerAltura = new JSpinner(
                 new SpinnerNumberModel(DEFAULT_HEIGHT, MIN_SIZE, MAX_SIZE, 1));
+        UITheme.styleSpinner(spinnerLargura);
+        UITheme.styleSpinner(spinnerAltura);
 
-        panel.add(new JLabel("Largura:"));
+        JLabel lblLargura = new JLabel("Largura:");
+        JLabel lblAltura = new JLabel("Altura:");
+        UITheme.styleLabel(lblLargura);
+        UITheme.styleLabel(lblAltura);
+
+        panel.add(lblLargura);
         panel.add(spinnerLargura);
-        panel.add(new JLabel("Altura:"));
+        panel.add(lblAltura);
         panel.add(spinnerAltura);
 
         return panel;
     }
 
+    // Combo para escolher qual algoritmo de GERACAO sera usado no
+    // labirinto criado por "Gerar Labirinto" (nao se aplica a "Abrir
+    // Labirinto Salvo...", que so carrega o que ja esta no arquivo).
+    private JPanel createCampoAlgoritmoGeracao() {
+        JPanel panel = new JPanel(new BorderLayout(4, 4));
+        panel.setBackground(UITheme.BG);
+        panel.setBorder(UITheme.titledBorder("Algoritmo de Geracao"));
+
+        comboAlgoritmoGeracao = new JComboBox<>(ALGORITMOS_GERACAO);
+        comboAlgoritmoGeracao.setSelectedIndex(0);
+
+        panel.add(comboAlgoritmoGeracao, BorderLayout.CENTER);
+        return panel;
+    }
+
     private JPanel createBotoes() {
         JPanel panel = new JPanel(new GridLayout(2, 1, 0, 8));
+        panel.setBackground(UITheme.BG);
 
-        JButton abrirBtn = new JButton("Abrir Labirinto Salvo...");
+        JButton abrirBtn = UITheme.button("Abrir Labirinto Salvo...");
         abrirBtn.addActionListener(e -> onAbrirArquivo());
 
-        JButton gerarBtn = new JButton("Gerar Labirinto");
+        JButton gerarBtn = UITheme.button("Gerar Labirinto");
         gerarBtn.addActionListener(e -> onGerarLabirinto());
 
         panel.add(abrirBtn);
@@ -101,6 +139,7 @@ public class LauncherUI extends JFrame {
         int altura = (Integer) spinnerAltura.getValue();
 
         MotorGrafico motor = new MotorGrafico();
+        motor.setMazeAlgorithm(comboAlgoritmoGeracao.getSelectedIndex());
 
         abrirControlesEIniciarMotor(motor, ui -> motor.init(ui.getMazeCanvas(), largura, altura));
     }

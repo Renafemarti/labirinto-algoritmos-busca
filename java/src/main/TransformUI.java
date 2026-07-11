@@ -47,6 +47,7 @@ public class TransformUI extends JFrame {
 
     private JSlider sliderSpeed;
     private Canvas mazeCanvas;
+    private JComboBox<String> comboAlgoritmoGeracao;
 
     // Guarda o ultimo tamanho de Canvas avisado ao lado nativo, para nao
     // spammar resizeViewport() com o mesmo valor a cada evento do Swing.
@@ -62,6 +63,7 @@ public class TransformUI extends JFrame {
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setLayout(new BorderLayout());
+        getContentPane().setBackground(UITheme.BG);
 
         add(createControlsPanel(), BorderLayout.WEST);
         add(createMazePanel(), BorderLayout.CENTER);
@@ -81,10 +83,10 @@ public class TransformUI extends JFrame {
      */
     private JPanel createMazePanel() {
         JPanel mazeWrapper = new JPanel(new BorderLayout());
-        mazeWrapper.setBackground(new Color(0x333338));
+        mazeWrapper.setBackground(UITheme.BG);
 
         mazeCanvas = new Canvas();
-        mazeCanvas.setBackground(new Color(0x333338));
+        mazeCanvas.setBackground(UITheme.BG);
         mazeCanvas.setFocusable(true);
         mazeWrapper.add(mazeCanvas, BorderLayout.CENTER);
 
@@ -143,22 +145,49 @@ public class TransformUI extends JFrame {
         JPanel body = new JPanel(new BorderLayout(8, 8));
         body.setPreferredSize(new Dimension(CONTROL_WIDTH, INITIAL_HEIGHT));
         body.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        body.setBackground(UITheme.BG);
 
-        body.add(createAlgoritmoPanel(), BorderLayout.NORTH);
+        body.add(createTopoPanel(), BorderLayout.NORTH);
         body.add(createCameraPanel(), BorderLayout.CENTER);
         body.add(createAcoesPanel(), BorderLayout.SOUTH);
         return body;
     }
 
+    // Empilha o painel de algoritmo de BUSCA com o novo painel de
+    // algoritmo de GERACAO do labirinto, um em cima do outro, no topo
+    // da coluna de controles. Precisamos limitar a largura maxima de
+    // cada painel filho (Integer.MAX_VALUE nao funciona bem com
+    // BoxLayout, mas um valor bem grande sim) para que eles esticem
+    // horizontalmente ate preencher a coluna, em vez de ficarem com a
+    // largura minima/preferida e sobrarem espacos vazios nas laterais.
+    private JPanel createTopoPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(UITheme.BG);
+
+        JPanel algoritmoPanel = createAlgoritmoPanel();
+        JPanel geracaoPanel = createGeracaoPanel();
+        algoritmoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        geracaoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        algoritmoPanel.setMaximumSize(new Dimension(9999, algoritmoPanel.getPreferredSize().height));
+        geracaoPanel.setMaximumSize(new Dimension(9999, geracaoPanel.getPreferredSize().height));
+
+        panel.add(algoritmoPanel);
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(geracaoPanel);
+        return panel;
+    }
+
     private JPanel createAlgoritmoPanel() {
         JPanel panel = new JPanel(new GridLayout(6, 1, 4, 4));
-        panel.setBorder(BorderFactory.createTitledBorder("Algoritmo de Busca"));
+        panel.setBackground(UITheme.BG);
+        panel.setBorder(UITheme.titledBorder("Algoritmo de Busca"));
 
-        JButton bfsBtn = new JButton("BFS");
-        JButton dfsBtn = new JButton("DFS");
-        JButton astarBtn = new JButton("A*");
-        JButton dijkstraBtn = new JButton("Dijkstra");
-        JButton gulosaBtn = new JButton("Gulosa (GBS)");
+        JButton bfsBtn = UITheme.button("BFS");
+        JButton dfsBtn = UITheme.button("DFS");
+        JButton astarBtn = UITheme.button("A*");
+        JButton dijkstraBtn = UITheme.button("Dijkstra");
+        JButton gulosaBtn = UITheme.button("Gulosa (GBS)");
 
         bfsBtn.addActionListener(e -> motor.setAlgorithm(0));
         dfsBtn.addActionListener(e -> motor.setAlgorithm(1));
@@ -166,7 +195,10 @@ public class TransformUI extends JFrame {
         dijkstraBtn.addActionListener(e -> motor.setAlgorithm(3));
         gulosaBtn.addActionListener(e -> motor.setAlgorithm(4));
 
-        panel.add(new JLabel("Escolha o algoritmo:"));
+        JLabel lblEscolha = new JLabel("Escolha o algoritmo:");
+        UITheme.styleLabel(lblEscolha);
+
+        panel.add(lblEscolha);
         panel.add(bfsBtn);
         panel.add(dfsBtn);
         panel.add(astarBtn);
@@ -176,9 +208,34 @@ public class TransformUI extends JFrame {
         return panel;
     }
 
+    // Escolhe qual algoritmo de GERACAO sera usado da PROXIMA vez que o
+    // labirinto for recriado (botao "Novo Labirinto" logo abaixo, no
+    // painel de Acoes). Trocar aqui NAO regenera o labirinto atual na
+    // hora — igual ao combo equivalente na tela de lancamento.
+    private JPanel createGeracaoPanel() {
+        JPanel panel = new JPanel(new BorderLayout(4, 4));
+        panel.setBackground(UITheme.BG);
+        panel.setBorder(UITheme.titledBorder("Algoritmo de Geracao do Labirinto"));
+
+        comboAlgoritmoGeracao = new JComboBox<>(
+                new String[]{"Recursive Backtracking", "Prim", "Kruskal"});
+        comboAlgoritmoGeracao.addActionListener(
+                e -> motor.setMazeAlgorithm(comboAlgoritmoGeracao.getSelectedIndex()));
+
+        JLabel info = new JLabel("Vale a partir do proximo \"Novo Labirinto\"");
+        info.setFont(UITheme.FONT_SMALL);
+        info.setForeground(UITheme.TEXT_SECONDARY);
+
+        panel.add(comboAlgoritmoGeracao, BorderLayout.CENTER);
+        panel.add(info, BorderLayout.SOUTH);
+
+        return panel;
+    }
+
     private JPanel createCameraPanel() {
         JPanel panel = new JPanel(new BorderLayout(4, 4));
-        panel.setBorder(BorderFactory.createTitledBorder("Camera e Velocidade"));
+        panel.setBackground(UITheme.BG);
+        panel.setBorder(UITheme.titledBorder("Camera e Velocidade"));
 
         JTextArea instrucoes = new JTextArea(
                 "Controle da camera pelo mouse, direto no labirinto:\n\n"
@@ -188,13 +245,15 @@ public class TransformUI extends JFrame {
         instrucoes.setLineWrap(true);
         instrucoes.setWrapStyleWord(true);
         instrucoes.setOpaque(false);
-        instrucoes.setFont(instrucoes.getFont().deriveFont(12f));
+        instrucoes.setForeground(UITheme.TEXT_SECONDARY);
+        instrucoes.setFont(UITheme.FONT_SMALL);
 
         sliderSpeed = new JSlider(1, 200, 20); // milissegundos (1 a 200ms)
         sliderSpeed.addChangeListener((ChangeEvent e) -> {
             float seconds = sliderSpeed.getValue() / 1000.0f;
             motor.setAnimationSpeed(seconds);
         });
+        UITheme.styleSlider(sliderSpeed);
 
         panel.add(instrucoes, BorderLayout.CENTER);
         panel.add(createSliderPanel("Velocidade da Animacao", sliderSpeed), BorderLayout.SOUTH);
@@ -202,29 +261,33 @@ public class TransformUI extends JFrame {
     }
 
     private JPanel createAcoesPanel() {
-        JPanel panel = new JPanel(new GridLayout(6, 1, 4, 4));
+        JPanel panel = new JPanel(new GridLayout(7, 1, 4, 4));
+        panel.setBackground(UITheme.BG);
 
-        JButton novoLabirintoBtn = new JButton("Novo Labirinto");
+        JButton novoLabirintoBtn = UITheme.button("Novo Labirinto");
         novoLabirintoBtn.addActionListener(e -> motor.generateNewMaze());
 
-        JButton reiniciarBtn = new JButton("Reiniciar Animacao");
+        JButton reiniciarBtn = UITheme.button("Reiniciar Animacao");
         reiniciarBtn.addActionListener(e -> motor.resetAnimation());
 
-        JButton voltarBtn = new JButton("Voltar Passo");
+        JButton voltarBtn = UITheme.button("Voltar Passo");
         voltarBtn.addActionListener(e -> motor.stepBack());
 
-        JButton pausarBtn = new JButton("Pausar");
+        JButton pausarBtn = UITheme.button("Pausar");
         pausarBtn.addActionListener(e -> {
             boolean pausar = pausarBtn.getText().equals("Pausar");
             motor.setPaused(pausar);
             pausarBtn.setText(pausar ? "Continuar" : "Pausar");
         });
 
-        JButton salvarBtn = new JButton("Salvar Labirinto e Estatisticas");
+        JButton salvarBtn = UITheme.button("Salvar Labirinto e Estatisticas");
         salvarBtn.addActionListener(e -> onSalvarLabirinto());
 
-        JButton estatisticasBtn = new JButton("Estatisticas");
+        JButton estatisticasBtn = UITheme.button("Estatisticas");
         estatisticasBtn.addActionListener(e -> onAbrirEstatisticas());
+
+        JButton menuBtn = UITheme.button("Voltar ao Menu");
+        menuBtn.addActionListener(e -> onVoltarAoMenu());
 
         panel.add(novoLabirintoBtn);
         panel.add(reiniciarBtn);
@@ -232,8 +295,33 @@ public class TransformUI extends JFrame {
         panel.add(pausarBtn);
         panel.add(salvarBtn);
         panel.add(estatisticasBtn);
+        panel.add(menuBtn);
 
         return panel;
+    }
+
+    /**
+     * Fecha a janela de controles + labirinto atual (desligando a thread
+     * OpenGL/GLFW por baixo, via motor.cleanup()) e abre novamente a tela
+     * inicial (LauncherUI), permitindo comecar um novo labirinto do zero
+     * sem precisar reiniciar a aplicacao inteira.
+     */
+    private void onVoltarAoMenu() {
+        int confirmacao = JOptionPane.showConfirmDialog(this,
+                "Voltar ao menu inicial?\nO labirinto atual e o progresso da animacao serao perdidos.",
+                "Voltar ao Menu",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+
+        if (confirmacao != JOptionPane.YES_OPTION) return;
+
+        motor.cleanup();
+        dispose();
+
+        SwingUtilities.invokeLater(() -> {
+            LauncherUI launcher = new LauncherUI();
+            launcher.setVisible(true);
+        });
     }
 
     private void onAbrirEstatisticas() {
@@ -243,7 +331,10 @@ public class TransformUI extends JFrame {
 
     private JPanel createSliderPanel(String title, JSlider slider) {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.add(new JLabel(title), BorderLayout.NORTH);
+        panel.setBackground(UITheme.BG);
+        JLabel lbl = new JLabel(title);
+        UITheme.styleLabel(lbl);
+        panel.add(lbl, BorderLayout.NORTH);
         panel.add(slider, BorderLayout.CENTER);
         return panel;
     }
