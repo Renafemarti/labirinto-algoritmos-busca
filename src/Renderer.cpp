@@ -1,3 +1,4 @@
+#define STB_TRUETYPE_IMPLEMENTATION
 #define _USE_MATH_DEFINES
 #include "Renderer.hpp"
 #include <glad/glad.h>
@@ -7,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
+#include <string>
 
 // Shaders 3D com Iluminação (Luz Direcional)
 const char* vertexShader3D = R"(
@@ -40,11 +42,9 @@ const char* fragmentShader3D = R"(
     uniform vec3 viewPos;
 
     void main() {
-        // Ambiente
         float ambientStrength = 0.4;
         vec3 ambient = ambientStrength * vec3(1.0, 1.0, 1.0);
         
-        // Difusa
         vec3 norm = normalize(Normal);
         vec3 lightDirN = normalize(-lightDir);
         float diff = max(dot(norm, lightDirN), 0.0);
@@ -52,6 +52,37 @@ const char* fragmentShader3D = R"(
         
         vec3 result = (ambient + diffuse) * objectColor.rgb;
         FragColor = vec4(result, objectColor.a);
+    }
+)";
+
+// Shaders para renderizar as letras coladas no chão
+const char* textVertexShader = R"(
+    #version 330 core
+    layout (location = 0) in vec4 vertex; // <x, z, u, v>
+    out vec2 TexCoords;
+
+    uniform mat4 view;
+    uniform mat4 projection;
+
+    void main() {
+        // Altura y=0.031 deixa o texto pairando milímetros acima do tapete colorido
+        gl_Position = projection * view * vec4(vertex.x, 0.031, vertex.y, 1.0);
+        TexCoords = vertex.zw;
+    }
+)";
+
+const char* textFragmentShader = R"(
+    #version 330 core
+    in vec2 TexCoords;
+    out vec4 color;
+
+    uniform sampler2D text;
+    uniform vec3 textColor;
+
+    void main() {
+        // A textura do STB só tem 1 canal de cor (Red), usamos ele como opacidade (Alpha)
+        vec4 sampled = vec4(1.0, 1.0, 1.0, texture(text, TexCoords).r);
+        color = vec4(textColor, 1.0) * sampled;
     }
 )";
 
@@ -82,6 +113,9 @@ void Renderer::initOpenGLResources() {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    // Inicia os Shaders e texturas de fonte
+    initText(); 
 }
 
 void Renderer::setupCube() {
@@ -147,12 +181,12 @@ void Renderer::setupSphere(int sectorCount, int stackCount) {
 
     for(int i = 0; i <= stackCount; ++i) {
         stackAngle = M_PI / 2 - i * stackStep;        
-        xy = 0.5f * cosf(stackAngle);             
-        z = 0.5f * sinf(stackAngle);              
+        xy = 0.5f * cosf(stackAngle);              
+        z = 0.5f * sinf(stackAngle);               
         for(int j = 0; j <= sectorCount; ++j) {
-            sectorAngle = j * sectorStep;           
-            x = xy * cosf(sectorAngle);             
-            y = xy * sinf(sectorAngle);             
+            sectorAngle = j * sectorStep;            
+            x = xy * cosf(sectorAngle);              
+            y = xy * sinf(sectorAngle);              
             
             nx = x * lengthInv; ny = y * lengthInv; nz = z * lengthInv;
             vertices.push_back(x); vertices.push_back(y); vertices.push_back(z);
@@ -190,10 +224,7 @@ void Renderer::setupSphere(int sectorCount, int stackCount) {
 void Renderer::applyCameraAndLight() const {
     glUseProgram(shaderProgram);
 
-    // Descobre qual é a maior dimensão do labirinto
     float maxDim = std::max(mazeWidth3D_, mazeDepth3D_);
-    
-    // Calcula um raio de distância dinâmico (1.2f costuma enquadrar perfeitamente)
     float radius = maxDim * 1.2f; 
     
     float camX = radius * cos(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch));
@@ -206,7 +237,6 @@ void Renderer::applyCameraAndLight() const {
 
     glm::mat4 view = glm::lookAt(cameraPos + cameraTarget, cameraTarget, cameraUp);
     
-    // O campo de visão cresce junto com o labirinto
     float farPlane = maxDim * 5.0f < 1000.0f ? 1000.0f : maxDim * 5.0f;
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)screenWidth_ / (float)screenHeight_, 0.1f, farPlane);
 
@@ -219,6 +249,8 @@ void Renderer::applyCameraAndLight() const {
 }
 
 void Renderer::drawCube(glm::vec3 position, glm::vec3 scale, glm::vec4 color) const {
+    glUseProgram(shaderProgram); // MANTÉM O SHADER 3D ATIVO!
+
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
     model = glm::scale(model, scale);
@@ -231,6 +263,8 @@ void Renderer::drawCube(glm::vec3 position, glm::vec3 scale, glm::vec4 color) co
 }
 
 void Renderer::drawSphere(glm::vec3 position, float radius, glm::vec4 color) const {
+    glUseProgram(shaderProgram); // MANTÉM O SHADER 3D ATIVO!
+
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
     model = glm::scale(model, glm::vec3(radius * 2.0f));
@@ -288,7 +322,7 @@ void Renderer::drawVisited(const Maze &maze, const SolveResult &result, size_t s
 
     size_t limit = std::min(stepCount, result.visitOrder.size());
     
-    // FASE 1: Apenas colore o chão (A bola foi removida daqui)
+    // FASE 1: Apenas colore o chão
     for (size_t i = 0; i < limit; ++i) {
         int idx = result.visitOrder[i];
         int x = idx % maze.width();
@@ -303,14 +337,17 @@ void Renderer::drawVisited(const Maze &maze, const SolveResult &result, size_t s
         if (wallCount == 3) currentColor = deadEndColor;
 
         drawCube(glm::vec3(cx, 0.01f, cz), glm::vec3(cellSize_ * 0.98f, 0.02f, cellSize_ * 0.98f), currentColor);
+        
+        // Renderiza o texto no chão (Escala maior 0.035f e cor BRANCA)
+        if (i < result.visitCosts.size()) {
+            drawTextOnFloor(std::to_string(result.visitCosts[i]), cx, cz, 0.035f, glm::vec3(1.0f, 1.0f, 1.0f));
+        }
     }
 }
 
 void Renderer::drawPath(const Maze &maze, const SolveResult &result, size_t stepCount) const {
-    // Se a Fase 1 ainda não terminou, não desenha o caminho final nem a bola
     if (stepCount <= result.visitOrder.size()) return;
     
-    // FASE 2: Calcula quantos passos a bola já deu no caminho final
     size_t pathSteps = stepCount - result.visitOrder.size();
     size_t limit = std::min(pathSteps, result.path.size());
 
@@ -318,7 +355,7 @@ void Renderer::drawPath(const Maze &maze, const SolveResult &result, size_t step
     glm::vec4 ballColor(1.0f, 0.4f, 0.0f, 1.0f);         
     float radius = cellSize_ * 0.35f;
 
-    // Pinta o chão de verde gradativamente
+    // Pinta o chão de verde gradativamente e adiciona os números
     for (size_t i = 0; i < limit; ++i) {
         int idx = result.path[i];
         int x = idx % maze.width();
@@ -327,6 +364,11 @@ void Renderer::drawPath(const Maze &maze, const SolveResult &result, size_t step
         getCellCenter(x, y, cx, cz);
         
         drawCube(glm::vec3(cx, 0.02f, cz), glm::vec3(cellSize_ * 0.98f, 0.02f, cellSize_ * 0.98f), pathFloorColor);
+        
+        // Renderiza o texto no chão do caminho final (Escala maior 0.035f e cor BRANCA)
+        if (i < result.pathCosts.size()) {
+            drawTextOnFloor(std::to_string(result.pathCosts[i]), cx, cz, 0.035f, glm::vec3(1.0f, 1.0f, 1.0f));
+        }
     }
 
     // Desenha a bola exatamente na ponta do caminho verde
@@ -353,4 +395,112 @@ void Renderer::drawStartAndGoal(const Maze &maze) const {
 
     getCellCenter(gx, gy, cx, cz);
     drawCube(glm::vec3(cx, 0.1f, cz), glm::vec3(cellSize_ * 0.8f, 0.2f, cellSize_ * 0.8f), goalColor);
+}
+
+void Renderer::initText() {
+    unsigned int vShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vShader, 1, &textVertexShader, NULL);
+    glCompileShader(vShader);
+
+    unsigned int fShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fShader, 1, &textFragmentShader, NULL);
+    glCompileShader(fShader);
+
+    textShaderProgram = glCreateProgram();
+    glAttachShader(textShaderProgram, vShader);
+    glAttachShader(textShaderProgram, fShader);
+    glLinkProgram(textShaderProgram);
+
+    glDeleteShader(vShader);
+    glDeleteShader(fShader);
+
+    // Usa alocação dinâmica (Heap) para não estourar a memória do Java (JNI)
+    unsigned char* ttf_buffer = new unsigned char[1<<20];
+    unsigned char* temp_bitmap = new unsigned char[512*512];
+
+    FILE* f = fopen("arial.ttf", "rb"); 
+    if (!f) {
+        std::cerr << "ERRO: Fonte arial.ttf nao encontrada na pasta raiz!" << std::endl;
+        delete[] ttf_buffer;
+        delete[] temp_bitmap;
+        return;
+    }
+    fread(ttf_buffer, 1, 1<<20, f);
+    fclose(f);
+
+    stbtt_BakeFontBitmap(ttf_buffer, 0, 32.0, temp_bitmap, 512, 512, 32, 96, cdata); 
+
+    glGenTextures(1, &fontTexture);
+    glBindTexture(GL_TEXTURE_2D, fontTexture);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, temp_bitmap);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    delete[] ttf_buffer;
+    delete[] temp_bitmap;
+
+    glGenVertexArrays(1, &textVAO);
+    glGenBuffers(1, &textVBO);
+    glBindVertexArray(textVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
+
+void Renderer::drawTextOnFloor(std::string text, float cx, float cz, float scale, glm::vec3 color) const {
+    glUseProgram(textShaderProgram);
+
+    float maxDim = std::max(mazeWidth3D_, mazeDepth3D_);
+    float radius = maxDim * 1.2f;
+    float camX = radius * cos(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch));
+    float camY = radius * sin(glm::radians(cameraPitch));
+    float camZ = radius * sin(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch));
+
+    glm::vec3 cameraPos = glm::vec3(camX, camY, camZ);
+    glm::vec3 cameraTarget = glm::vec3(mazeWidth3D_ / 2.0f, 0.0f, mazeDepth3D_ / 2.0f);
+    glm::mat4 view = glm::lookAt(cameraPos + cameraTarget, cameraTarget, glm::vec3(0.0f, 1.0f, 0.0f));
+    float farPlane = maxDim * 5.0f < 1000.0f ? 1000.0f : maxDim * 5.0f;
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)screenWidth_ / (float)screenHeight_, 0.1f, farPlane);
+
+    glUniformMatrix4fv(glGetUniformLocation(textShaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(glGetUniformLocation(textShaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+    glUniform3f(glGetUniformLocation(textShaderProgram, "textColor"), color.x, color.y, color.z);
+
+    float textWidth = 0.0f;
+    for (char c : text) {
+        if (c >= 32 && c < 128) textWidth += cdata[c - 32].xadvance * scale;
+    }
+    
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, fontTexture);
+    glBindVertexArray(textVAO);
+
+    float currentX = 0.0f;
+    float currentZ = 0.0f;
+
+    for (char c : text) {
+        if (c >= 32 && c < 128) {
+            stbtt_aligned_quad q;
+            stbtt_GetBakedQuad(cdata, 512, 512, c - 32, &currentX, &currentZ, &q, 1);
+
+            float x0 = cx - (textWidth / 2.0f) + (q.x0 * scale);
+            float x1 = cx - (textWidth / 2.0f) + (q.x1 * scale);
+            float z0 = cz + (q.y0 * scale);
+            float z1 = cz + (q.y1 * scale);
+
+            float vertices[6][4] = {
+                { x0, z0, q.s0, q.t0 }, { x0, z1, q.s0, q.t1 }, { x1, z1, q.s1, q.t1 },
+                { x0, z0, q.s0, q.t0 }, { x1, z1, q.s1, q.t1 }, { x1, z0, q.s1, q.t0 }
+            };
+
+            glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+            glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
+    }
+    glBindVertexArray(0);
 }

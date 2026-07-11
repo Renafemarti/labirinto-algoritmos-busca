@@ -25,6 +25,9 @@ struct SolveResult {
     std::vector<int> visitOrder; // índices de célula (Maze::index) na ordem de exploração
     std::vector<int> path;       // índices de célula do start até o goal, em ordem
 
+    std::vector<int> visitCosts; 
+    std::vector<int> pathCosts;  
+
     int cost = -1;
     int nodesExpanded = 0;
     int maxNodesInMemory = 0;

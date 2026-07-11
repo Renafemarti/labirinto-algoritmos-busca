@@ -45,6 +45,7 @@ std::vector<int> neighbors(const Maze &maze, int x, int y) {
 SolveResult bfs(const Maze &maze, int startIdx, int goalIdx) {
     SolveResult result;
     std::vector<bool> visited(static_cast<size_t>(maze.width()) * maze.height(), false);
+    std::vector<int> dist(static_cast<size_t>(maze.width()) * maze.height(), 0); // NOVO: Rastreia a distância
     std::unordered_map<int, int> cameFrom;
     std::queue<int> frontier;
 
@@ -57,7 +58,9 @@ SolveResult bfs(const Maze &maze, int startIdx, int goalIdx) {
 
         int current = frontier.front();
         frontier.pop();
+        
         result.visitOrder.push_back(current);
+        result.visitCosts.push_back(dist[current]); // NOVO: Salva o custo (distância)
         result.nodesExpanded++;
 
         if (current == goalIdx) break;
@@ -68,6 +71,7 @@ SolveResult bfs(const Maze &maze, int startIdx, int goalIdx) {
             if (!visited[next]) {
                 visited[next] = true;
                 cameFrom[next] = current;
+                dist[next] = dist[current] + 1; // NOVO: Calcula a distância do vizinho
                 frontier.push(next);
             }
         }
@@ -78,12 +82,19 @@ SolveResult bfs(const Maze &maze, int startIdx, int goalIdx) {
 
     result.path = reconstructPath(cameFrom, startIdx, goalIdx);
     result.cost = result.path.empty() ? -1 : static_cast<int>(result.path.size()) - 1;
+    
+    // NOVO: Preenche os custos do caminho final
+    for (int node : result.path) {
+        result.pathCosts.push_back(dist[node]);
+    }
+    
     return result;
 }
 
 SolveResult dfs(const Maze &maze, int startIdx, int goalIdx) {
     SolveResult result;
     std::vector<bool> visited(static_cast<size_t>(maze.width()) * maze.height(), false);
+    std::vector<int> depth(static_cast<size_t>(maze.width()) * maze.height(), 0); // NOVO: Rastreia a profundidade
     std::unordered_map<int, int> cameFrom;
     std::vector<int> stack;
 
@@ -98,7 +109,9 @@ SolveResult dfs(const Maze &maze, int startIdx, int goalIdx) {
 
         if (visited[current]) continue;
         visited[current] = true;
+        
         result.visitOrder.push_back(current);
+        result.visitCosts.push_back(depth[current]); // NOVO: Salva a profundidade
         result.nodesExpanded++;
 
         if (current == goalIdx) break;
@@ -109,6 +122,7 @@ SolveResult dfs(const Maze &maze, int startIdx, int goalIdx) {
             if (!visited[next]) {
                 if (cameFrom.find(next) == cameFrom.end()) {
                     cameFrom[next] = current;
+                    depth[next] = depth[current] + 1; // NOVO: Calcula a profundidade do vizinho
                 }
                 stack.push_back(next);
             }
@@ -120,6 +134,12 @@ SolveResult dfs(const Maze &maze, int startIdx, int goalIdx) {
 
     result.path = reconstructPath(cameFrom, startIdx, goalIdx);
     result.cost = result.path.empty() ? -1 : static_cast<int>(result.path.size()) - 1;
+    
+    // NOVO: Preenche os custos do caminho final
+    for (int node : result.path) {
+        result.pathCosts.push_back(depth[node]);
+    }
+    
     return result;
 }
 
@@ -131,7 +151,6 @@ SolveResult astar(const Maze &maze, int startIdx, int goalIdx) {
         int y = idx / maze.width();
         int gx = goalIdx % maze.width();
         int gy = goalIdx / maze.width();
-        // Distância de Manhattan: admissível para movimento em grade 4-direções
         return std::abs(x - gx) + std::abs(y - gy);
     };
 
@@ -151,12 +170,13 @@ SolveResult astar(const Maze &maze, int startIdx, int goalIdx) {
         result.iterations++;
 
         auto [f, current] = frontier.top();
-        (void)f;
         frontier.pop();
 
         if (closed[current]) continue;
         closed[current] = true;
+        
         result.visitOrder.push_back(current);
+        result.visitCosts.push_back(f); // NOVO: Salva o fScore (peso total)
         result.nodesExpanded++;
 
         if (current == goalIdx) break;
@@ -164,7 +184,7 @@ SolveResult astar(const Maze &maze, int startIdx, int goalIdx) {
         int x = current % maze.width();
         int y = current / maze.width();
         for (int next : neighbors(maze, x, y)) {
-            int tentativeG = gScore[current] + 1; // custo uniforme por passo
+            int tentativeG = gScore[current] + 1; 
             if (tentativeG < gScore[next]) {
                 gScore[next] = tentativeG;
                 cameFrom[next] = current;
@@ -178,6 +198,12 @@ SolveResult astar(const Maze &maze, int startIdx, int goalIdx) {
 
     result.path = reconstructPath(cameFrom, startIdx, goalIdx);
     result.cost = result.path.empty() ? -1 : gScore[goalIdx];
+    
+    // NOVO: Preenche os custos do caminho final (fScore)
+    for (int node : result.path) {
+        result.pathCosts.push_back(gScore[node] + heuristic(node));
+    }
+    
     return result;
 }
 
@@ -200,12 +226,13 @@ SolveResult dijkstra(const Maze &maze, int startIdx, int goalIdx) {
         result.iterations++;
 
         auto [g, current] = frontier.top();
-        (void)g;
         frontier.pop();
 
         if (closed[current]) continue;
         closed[current] = true;
+        
         result.visitOrder.push_back(current);
+        result.visitCosts.push_back(g); // NOVO: Salva o gScore (distância percorrida)
         result.nodesExpanded++;
 
         if (current == goalIdx) break;
@@ -213,7 +240,7 @@ SolveResult dijkstra(const Maze &maze, int startIdx, int goalIdx) {
         int x = current % maze.width();
         int y = current / maze.width();
         for (int next : neighbors(maze, x, y)) {
-            int tentativeG = gScore[current] + 1; // custo uniforme por passo
+            int tentativeG = gScore[current] + 1; 
             if (tentativeG < gScore[next]) {
                 gScore[next] = tentativeG;
                 cameFrom[next] = current;
@@ -227,12 +254,15 @@ SolveResult dijkstra(const Maze &maze, int startIdx, int goalIdx) {
 
     result.path = reconstructPath(cameFrom, startIdx, goalIdx);
     result.cost = result.path.empty() ? -1 : gScore[goalIdx];
+    
+    // NOVO: Preenche os custos do caminho final
+    for (int node : result.path) {
+        result.pathCosts.push_back(gScore[node]);
+    }
+    
     return result;
 }
 
-// Busca Gulosa (Greedy Best-First Search): expande sempre o nó com menor
-// heurística h(n) até o objetivo, ignorando o custo já percorrido g(n).
-// É mais rápida que A*, mas não garante o caminho mais curto.
 SolveResult greedy(const Maze &maze, int startIdx, int goalIdx) {
     SolveResult result;
 
@@ -258,10 +288,10 @@ SolveResult greedy(const Maze &maze, int startIdx, int goalIdx) {
         result.iterations++;
 
         auto [h, current] = frontier.top();
-        (void)h;
         frontier.pop();
 
         result.visitOrder.push_back(current);
+        result.visitCosts.push_back(h); // NOVO: Salva a heurística pura
         result.nodesExpanded++;
 
         if (current == goalIdx) break;
@@ -280,9 +310,14 @@ SolveResult greedy(const Maze &maze, int startIdx, int goalIdx) {
                                             static_cast<int>(frontier.size()));
     }
 
-    // Custo real do caminho encontrado (a busca gulosa não garante ser o menor).
     result.path = reconstructPath(cameFrom, startIdx, goalIdx);
     result.cost = result.path.empty() ? -1 : static_cast<int>(result.path.size()) - 1;
+    
+    // NOVO: Preenche os custos do caminho final
+    for (int node : result.path) {
+        result.pathCosts.push_back(heuristic(node));
+    }
+    
     return result;
 }
 

@@ -5,6 +5,8 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <cstddef>
+#include <string>
+#include "stb_truetype.h"
 
 class Renderer {
 public:
@@ -46,4 +48,12 @@ private:
     void drawCube(glm::vec3 position, glm::vec3 scale, glm::vec4 color) const;
     void drawSphere(glm::vec3 position, float radius, glm::vec4 color) const;
     void applyCameraAndLight() const;
+
+    unsigned int textShaderProgram;
+    unsigned int textVAO, textVBO;
+    unsigned int fontTexture;
+    stbtt_bakedchar cdata[96];
+
+    void initText();
+    void drawTextOnFloor(std::string text, float cx, float cz, float scale, glm::vec3 color) const;
 };
