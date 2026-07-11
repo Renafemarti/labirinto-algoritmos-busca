@@ -4,11 +4,13 @@
 
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <mutex>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "Maze.hpp"
@@ -55,6 +57,18 @@ std::mutex g_savePathMutex;
 std::string g_savePath;
 std::atomic<bool> g_isPaused{false};
 std::atomic<bool> g_requestStepBack{false};
+
+// -----------------------------------------------------------------
+// Estatisticas de todos os algoritmos (para o grafico de barras).
+// Segue o mesmo padrao de "pedido + processamento no loop de render"
+// usado por g_requestSave: a thread Swing (EDT) seta g_requestStats,
+// a OpenGL-Thread calcula e guarda o resultado em g_statsResult, e a
+// EDT fica esperando g_statsReady virar true antes de ler o texto.
+// -----------------------------------------------------------------
+std::atomic<bool> g_requestStats{false};
+std::atomic<bool> g_statsReady{false};
+std::mutex g_statsMutex;
+std::string g_statsResult;
 
 Algorithm algorithmFromId(int id) {
     switch (id) {
@@ -215,6 +229,34 @@ void saveMazeAndStatsToFile(const std::string &path) {
 }
 
 
+// -----------------------------------------------------------------
+// Roda os 5 algoritmos no labirinto atual e monta uma string com uma
+// linha por algoritmo, no formato:
+//   nome;custo;nos_expandidos;max_nos_memoria;iteracoes
+// E' esse texto que a EstatisticasUI (Java) faz o parse para desenhar
+// o grafico de barras. Nao mexe no 'result'/'currentAlgo' que estao
+// sendo animados na tela.
+// -----------------------------------------------------------------
+std::string computeStatisticsText() {
+    if (!maze) return "";
+
+    static const Algorithm todosAlgoritmos[] = {
+        Algorithm::BFS, Algorithm::DFS, Algorithm::ASTAR,
+        Algorithm::DIJKSTRA, Algorithm::GREEDY
+    };
+
+    std::ostringstream out;
+    for (Algorithm algo : todosAlgoritmos) {
+        SolveResult r = solve(*maze, algo);
+        out << algorithmName(algo) << ";"
+            << r.cost << ";"
+            << r.nodesExpanded << ";"
+            << r.maxNodesInMemory << ";"
+            << r.iterations << "\n";
+    }
+    return out.str();
+}
+
 void framebuffer_size_callback(GLFWwindow *, int width, int height) {
     glViewport(0, 0, width, height);
 }
@@ -292,6 +334,15 @@ void runRenderLoop() {
                 path = g_savePath;
             }
             saveMazeAndStatsToFile(path);
+        }
+
+        if (g_requestStats.exchange(false)) {
+            std::string text = computeStatisticsText();
+            {
+                std::lock_guard<std::mutex> lock(g_statsMutex);
+                g_statsResult = text;
+            }
+            g_statsReady.store(true);
         }
 
         renderer->cameraYaw = g_cameraYaw.load();
@@ -492,4 +543,37 @@ JNIEXPORT void JNICALL Java_main_MotorGrafico_setPaused
 JNIEXPORT void JNICALL Java_main_MotorGrafico_stepBack
   (JNIEnv *, jobject) {
     g_requestStepBack.store(true);
+}
+
+// ---------------------------------------------------------------------
+// Java_main_MotorGrafico_getStatistics
+// Pede para a OpenGL-Thread calcular as estatisticas dos 5 algoritmos
+// no labirinto atual e espera (bloqueando a thread que chamou, em
+// geral a EDT do Swing) ate o resultado ficar pronto. Tem um limite
+// de espera de ~1s para nao travar a interface caso a janela OpenGL
+// nao esteja rodando (ex.: motor.init() ainda nao terminou).
+// ---------------------------------------------------------------------
+JNIEXPORT jstring JNICALL Java_main_MotorGrafico_getStatistics
+  (JNIEnv *env, jobject) {
+
+    if (!maze) {
+        return env->NewStringUTF("");
+    }
+
+    g_statsReady.store(false);
+    g_requestStats.store(true);
+
+    const int maxWaitMs = 1000;
+    int waitedMs = 0;
+    while (!g_statsReady.load() && waitedMs < maxWaitMs) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        waitedMs += 5;
+    }
+
+    std::string text;
+    {
+        std::lock_guard<std::mutex> lock(g_statsMutex);
+        text = g_statsResult;
+    }
+    return env->NewStringUTF(text.c_str());
 }
