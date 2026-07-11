@@ -49,6 +49,14 @@ JNIEXPORT void JNICALL Java_main_MotorGrafico_generateNewMaze
 
 /*
  * Class:     main_MotorGrafico
+ * Method:    setMazeAlgorithm
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_main_MotorGrafico_setMazeAlgorithm
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     main_MotorGrafico
  * Method:    setAlgorithm
  * Signature: (I)V
  */

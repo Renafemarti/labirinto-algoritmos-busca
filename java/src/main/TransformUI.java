@@ -39,9 +39,9 @@ public class TransformUI extends JFrame {
     private static final long serialVersionUID = 1L;
 
     // Largura do painel de controles e tamanho inicial da janela combinada.
-    private static final int CONTROL_WIDTH = 320;
-    private static final int INITIAL_MAZE_WIDTH = 900;
-    private static final int INITIAL_HEIGHT = 700;
+    private static final int CONTROL_WIDTH = 500;
+    private static final int INITIAL_MAZE_WIDTH = 1200;
+    private static final int INITIAL_HEIGHT = 1000;
 
     private final MotorGrafico motor;
 
