@@ -93,6 +93,60 @@ void Maze::generateRecursiveBacktracking(unsigned int seed) {
         at(nx, ny).visited = true;
         stack.push({nx, ny});
     }
+
+    // -----------------------------------------------------------------
+    // "Braiding": o algoritmo acima gera um labirinto PERFEITO, ou seja,
+    // uma arvore geradora onde existe exatamente UM unico caminho entre
+    // duas celulas quaisquer. Isso faz com que BFS, DFS, A*, Dijkstra e
+    // Busca Gulosa acabem sempre desenhando o mesmo caminho final na
+    // tela (o caminho é o mesmo; só a ordem de exploração muda) — o que
+    // deixa o grafico de comparacao menos interessante.
+    //
+    // Para permitir caminhos alternativos ate a saida, percorremos os
+    // becos sem saida (celulas com 3 paredes, 1 unica passagem) em
+    // ordem aleatoria e, com probabilidade kBraidChance, removemos mais
+    // UMA parede para um vizinho valido qualquer, criando um "loop" no
+    // labirinto. Isso NAO afeta Prim/Kruskal, so o Recursive
+    // Backtracking, como pedido.
+    // -----------------------------------------------------------------
+    constexpr double kBraidChance = 0.5; // 0 = labirinto perfeito, 1 = quase sem becos sem saida
+
+    std::vector<int> ordemCelulas(static_cast<size_t>(width_) * height_);
+    for (size_t i = 0; i < ordemCelulas.size(); ++i) ordemCelulas[i] = static_cast<int>(i);
+    std::shuffle(ordemCelulas.begin(), ordemCelulas.end(), rng);
+
+    std::uniform_real_distribution<double> chanceDist(0.0, 1.0);
+
+    for (int idx : ordemCelulas) {
+        int x = idx % width_;
+        int y = idx / width_;
+
+        int paredes = 0;
+        for (int dir = 0; dir < 4; ++dir) {
+            if (at(x, y).walls[dir]) paredes++;
+        }
+
+        // Só mexemos em becos sem saída (3 paredes, 1 única passagem).
+        if (paredes != 3) continue;
+        if (chanceDist(rng) > kBraidChance) continue;
+
+        // Vizinhos válidos que ainda têm parede: abrir aqui cria uma
+        // conexão nova (um loop), em vez de reabrir uma passagem que já
+        // existe.
+        std::vector<int> candidatosBraid;
+        for (int dir = 0; dir < 4; ++dir) {
+            int nx = x + dx[dir];
+            int ny = y + dy[dir];
+            if (inBounds(nx, ny) && at(x, y).walls[dir]) {
+                candidatosBraid.push_back(dir);
+            }
+        }
+        if (candidatosBraid.empty()) continue;
+
+        std::uniform_int_distribution<size_t> distBraid(0, candidatosBraid.size() - 1);
+        int dirBraid = candidatosBraid[distBraid(rng)];
+        removeWallBetween(x, y, x + dx[dirBraid], y + dy[dirBraid]);
+    }
 }
 
 // -----------------------------------------------------------------

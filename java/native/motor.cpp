@@ -324,6 +324,7 @@ void saveMazeAndStatsToFile(const std::string &path) {
         out << "nos_expandidos=" << r.nodesExpanded << "\n";
         out << "tempo_ms=" << r.executionTimeMs << "\n";
         out << "iteracoes=" << r.iterations << "\n";
+        out << "max_memoria=" << r.maxNodesInMemory << "\n";
         out << "\n";
     }
  
@@ -335,7 +336,7 @@ void saveMazeAndStatsToFile(const std::string &path) {
 // -----------------------------------------------------------------
 // Roda os 5 algoritmos no labirinto atual e monta uma string com uma
 // linha por algoritmo, no formato:
-//   nome;custo;nos_expandidos;tempo_ms;iteracoes
+//   nome;custo;nos_expandidos;tempo_ms;iteracoes;max_memoria
 // E' esse texto que a EstatisticasUI (Java) faz o parse para desenhar
 // o grafico de barras. Nao mexe no 'result'/'currentAlgo' que estao
 // sendo animados na tela.
@@ -355,7 +356,8 @@ std::string computeStatisticsText() {
             << r.cost << ";"
             << r.nodesExpanded << ";"
             << r.executionTimeMs << ";"
-            << r.iterations << "\n";
+            << r.iterations << ";"
+            << r.maxNodesInMemory << "\n";
     }
     return out.str();
 }

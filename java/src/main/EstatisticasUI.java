@@ -27,24 +27,25 @@ public class EstatisticasUI extends JFrame {
     private static final long serialVersionUID = 1L;
 
     private static final String[] SERIES_LABELS = {
-            "Custo", "Nos Expandidos", "Interacoes", "Tempo (ms)"
+            "Custo", "Nos Expandidos", "Max Nos Memoria", "Interacoes"
     };
 
     private static final Color[] SERIES_COLORS = {
             new Color(0x1F77B4), // Custo            - azul
             new Color(0xFF7F0E), // Nos Expandidos    - laranja
-            new Color(0xD62728), // Interacoes        - vermelho
-            new Color(0x2CA02C)  // Tempo (ms)        - verde
+            new Color(0x2CA02C), // Max Nos Memoria   - verde
+            new Color(0xD62728)  // Interacoes        - vermelho
     };
 
     // Uma linha do texto recebido de getStatistics():
-    // nome;custo;nos_expandidos;tempo_ms;iteracoes
+    // nome;custo;nos_expandidos;tempo_ms;iteracoes;max_memoria
     private static class Estatistica {
         String nome;
         double custo;
         double nosExpandidos;
         double tempoMs;
         double iteracoes;
+        double maxMemoria;
     }
 
     public EstatisticasUI(MotorGrafico motor) {
@@ -79,8 +80,8 @@ public class EstatisticasUI extends JFrame {
             groupLabels[i] = e.nome;
             valores[i][0] = Math.max(e.custo, 0);
             valores[i][1] = e.nosExpandidos;
-            valores[i][2] = e.iteracoes;
-            valores[i][3] = e.tempoMs;
+            valores[i][2] = e.maxMemoria;
+            valores[i][3] = e.iteracoes;
         }
 
         GroupedBarChartPanel grafico = new GroupedBarChartPanel();
@@ -117,7 +118,7 @@ public class EstatisticasUI extends JFrame {
             if (linha.isEmpty()) continue;
 
             String[] campos = linha.split(";");
-            if (campos.length != 5) continue; // linha em formato inesperado, ignora
+            if (campos.length != 6) continue; // linha em formato inesperado, ignora
 
             try {
                 Estatistica e = new Estatistica();
@@ -126,6 +127,7 @@ public class EstatisticasUI extends JFrame {
                 e.nosExpandidos = Double.parseDouble(campos[2]);
                 e.tempoMs = Double.parseDouble(campos[3]);
                 e.iteracoes = Double.parseDouble(campos[4]);
+                e.maxMemoria = Double.parseDouble(campos[5]);
                 lista.add(e);
             } catch (NumberFormatException ex) {
                 // linha corrompida/inesperada: ignora e continua com as demais
