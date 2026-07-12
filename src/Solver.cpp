@@ -1,6 +1,7 @@
 #include "Solver.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <deque>
 #include <limits>
@@ -329,12 +330,23 @@ SolveResult solve(const Maze &maze, Algorithm algo) {
     int startIdx = maze.index(sx, sy);
     int goalIdx = maze.index(gx, gy);
 
+    // Cronometra apenas a execucao do algoritmo em si (sem contar a
+    // preparacao acima), em milissegundos. clock de alta resolucao para
+    // nao perder precisao em labirintos pequenos/rapidos.
+    auto inicio = std::chrono::high_resolution_clock::now();
+
+    SolveResult resultado;
     switch (algo) {
-        case Algorithm::BFS:   return bfs(maze, startIdx, goalIdx);
-        case Algorithm::DFS:   return dfs(maze, startIdx, goalIdx);
-        case Algorithm::ASTAR: return astar(maze, startIdx, goalIdx);
-        case Algorithm::DIJKSTRA: return dijkstra(maze, startIdx, goalIdx);
-        case Algorithm::GREEDY: return greedy(maze, startIdx, goalIdx);
+        case Algorithm::BFS:      resultado = bfs(maze, startIdx, goalIdx); break;
+        case Algorithm::DFS:      resultado = dfs(maze, startIdx, goalIdx); break;
+        case Algorithm::ASTAR:    resultado = astar(maze, startIdx, goalIdx); break;
+        case Algorithm::DIJKSTRA: resultado = dijkstra(maze, startIdx, goalIdx); break;
+        case Algorithm::GREEDY:   resultado = greedy(maze, startIdx, goalIdx); break;
     }
-    return {};
+
+    auto fim = std::chrono::high_resolution_clock::now();
+    resultado.executionTimeMs =
+        std::chrono::duration<double, std::milli>(fim - inicio).count();
+
+    return resultado;
 }

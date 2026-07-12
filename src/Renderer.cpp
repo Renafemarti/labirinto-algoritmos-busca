@@ -225,7 +225,7 @@ void Renderer::applyCameraAndLight() const {
     glUseProgram(shaderProgram);
 
     float maxDim = std::max(mazeWidth3D_, mazeDepth3D_);
-    float radius = maxDim * 1.2f; 
+    float radius = maxDim * 1.2f * cameraZoom; 
     
     float camX = radius * cos(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch));
     float camY = radius * sin(glm::radians(cameraPitch));
@@ -274,6 +274,13 @@ void Renderer::drawSphere(glm::vec3 position, float radius, glm::vec4 color) con
 
     glBindVertexArray(sphereVAO);
     glDrawElements(GL_TRIANGLES, sphereIndexCount, GL_UNSIGNED_INT, 0);
+}
+
+void Renderer::resize(int screenWidth, int screenHeight) {
+    // screenHeight_ == 0 nao deve acontecer, mas protege a divisao usada no
+    // aspect ratio da projecao (applyCameraAndLight / drawTextOnFloor).
+    screenWidth_ = screenWidth;
+    screenHeight_ = screenHeight > 0 ? screenHeight : 1;
 }
 
 void Renderer::computeCellSize(const Maze &maze) {
@@ -455,7 +462,7 @@ void Renderer::drawTextOnFloor(std::string text, float cx, float cz, float scale
     glUseProgram(textShaderProgram);
 
     float maxDim = std::max(mazeWidth3D_, mazeDepth3D_);
-    float radius = maxDim * 1.2f;
+    float radius = maxDim * 1.2f * cameraZoom;
     float camX = radius * cos(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch));
     float camY = radius * sin(glm::radians(cameraPitch));
     float camZ = radius * sin(glm::radians(cameraYaw)) * cos(glm::radians(cameraPitch));
