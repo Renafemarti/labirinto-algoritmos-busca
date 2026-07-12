@@ -31,7 +31,7 @@ public class GroupedBarChartPanel extends JPanel {
     private double[][] values = new double[0][0];    // values[grupo][serie]
 
     public GroupedBarChartPanel() {
-        setBackground(Color.WHITE);
+        setBackground(UITheme.BG);
         setPreferredSize(new Dimension(900, 620));
     }
 
@@ -58,14 +58,15 @@ public class GroupedBarChartPanel extends JPanel {
         int panelHeight = getHeight();
 
         // ---------- Título ----------
-        g2.setColor(new Color(0x1F2937));
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 18));
+        g2.setColor(UITheme.TEXT_PRIMARY);
+        g2.setFont(UITheme.FONT_TITLE);
         FontMetrics titleMetrics = g2.getFontMetrics();
         int titleX = (panelWidth - titleMetrics.stringWidth(title)) / 2;
         g2.drawString(title, Math.max(titleX, 10), 26);
 
         if (values.length == 0 || seriesLabels.length == 0) {
-            g2.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            g2.setColor(UITheme.TEXT_SECONDARY);
+            g2.setFont(UITheme.FONT_BASE);
             g2.drawString("Sem dados para exibir.", 20, 60);
             return;
         }
@@ -97,31 +98,31 @@ public class GroupedBarChartPanel extends JPanel {
         int tickCount = 7; // 0..niceMax em 7 divisões, como na imagem de referência
         double tickStep = niceMax / tickCount;
 
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        g2.setFont(UITheme.FONT_SMALL);
         FontMetrics tickMetrics = g2.getFontMetrics();
 
-        g2.setColor(new Color(0x374151));
+        g2.setColor(UITheme.TEXT_SECONDARY);
         for (int i = 0; i <= tickCount; i++) {
             double tickValue = tickStep * i;
             int y = plotBottom - (int) Math.round((tickValue / niceMax) * plotHeight);
 
-            g2.setColor(new Color(0xE5E7EB));
+            g2.setColor(UITheme.BORDER);
             g2.drawLine(plotLeft, y, plotRight, y);
 
-            g2.setColor(new Color(0x374151));
+            g2.setColor(UITheme.TEXT_SECONDARY);
             String label = formatValue(tickValue);
             int labelWidth = tickMetrics.stringWidth(label);
             g2.drawString(label, plotLeft - labelWidth - 8, y + 4);
         }
 
         // Caixa do gráfico (bordas)
-        g2.setColor(new Color(0x9CA3AF));
+        g2.setColor(UITheme.BORDER_LIGHT);
         g2.setStroke(new BasicStroke(1.2f));
         g2.drawRect(plotLeft, plotTop, plotWidth, plotHeight);
 
         // ---------- Rótulo do eixo Y (texto vertical) ----------
-        g2.setColor(new Color(0x1F2937));
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        g2.setColor(UITheme.TEXT_PRIMARY);
+        g2.setFont(UITheme.FONT_BASE);
         Graphics2D gRot = (Graphics2D) g2.create();
         gRot.rotate(-Math.PI / 2);
         FontMetrics yLabelMetrics = gRot.getFontMetrics();
@@ -138,7 +139,7 @@ public class GroupedBarChartPanel extends JPanel {
         int usableGroupWidth = (int) (groupSlot * (1.0 - groupPaddingFraction));
         int barWidth = usableGroupWidth / Math.max(seriesCount, 1);
 
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        g2.setFont(UITheme.FONT_SMALL);
         FontMetrics valueMetrics = g2.getFontMetrics();
 
         for (int gI = 0; gI < groupCount; gI++) {
@@ -160,7 +161,7 @@ public class GroupedBarChartPanel extends JPanel {
 
                 // Valor acima da barra
                 String valueText = formatValue(value);
-                g2.setColor(new Color(0x111827));
+                g2.setColor(UITheme.TEXT_PRIMARY);
                 int valueX = barX + (barWidth - valueMetrics.stringWidth(valueText)) / 2;
                 g2.drawString(valueText, valueX, barY - 6);
             }
@@ -169,13 +170,13 @@ public class GroupedBarChartPanel extends JPanel {
             String groupLabel = groupLabels[gI];
             int labelWidth = valueMetrics.stringWidth(groupLabel);
             int labelX = plotLeft + groupSlot * gI + (groupSlot - labelWidth) / 2;
-            g2.setColor(new Color(0x1F2937));
+            g2.setColor(UITheme.TEXT_PRIMARY);
             g2.drawString(groupLabel, labelX, plotBottom + 20);
         }
     }
 
     private void drawLegend(Graphics2D g2, int startX, int startY) {
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        g2.setFont(UITheme.FONT_SMALL);
         FontMetrics fm = g2.getFontMetrics();
 
         int swatchSize = 12;
@@ -187,9 +188,9 @@ public class GroupedBarChartPanel extends JPanel {
         for (int i = 0; i < seriesLabels.length; i++) {
             Color color = seriesColors[i % seriesColors.length];
             g2.setColor(color);
-            g2.fillRect(x, y - swatchSize + 2, swatchSize, swatchSize);
+            g2.fillRoundRect(x, y - swatchSize + 2, swatchSize, swatchSize, 4, 4);
 
-            g2.setColor(new Color(0x1F2937));
+            g2.setColor(UITheme.TEXT_PRIMARY);
             g2.drawString(seriesLabels[i], x + swatchSize + gapAfterSwatch, y + 2);
 
             x += swatchSize + gapAfterSwatch + fm.stringWidth(seriesLabels[i]) + gapAfterEntry;

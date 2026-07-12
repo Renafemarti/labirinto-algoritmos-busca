@@ -68,9 +68,18 @@ g++ -std=c++17 -shared -fPIC \
     -Iinclude -Iexternal/glad/include -Ijava/headers \
     -I/usr/lib/jvm/java-21-openjdk-amd64/include \
     -I/usr/lib/jvm/java-21-openjdk-amd64/include/linux \
+    -L/usr/lib/jvm/java-21-openjdk-amd64/lib \
     -o java/lib/libmotor.so \
-    -lglfw -lGL -ldl
+    -lglfw -lGL -ldl -ljawt -lX11 \
+    -Wl,-rpath,/usr/lib/jvm/java-21-openjdk-amd64/lib
 ```
+
+> `-ljawt` e `-lX11` sao necessarios porque a janela do labirinto agora e
+> **embutida** dentro do `Canvas` Swing da tela de controles (uma unica
+> janela, com barra de titulo do SO) em vez de ser uma janela separada. O
+> lado nativo usa **JAWT** para pegar a Window X11 por tras do `Canvas` e
+> faz a janela GLFW nascer reparentada dentro dela via `XReparentWindow`
+> (ver `embedIntoCanvas()` em `java/native/motor.cpp`).
 
 ### 4. Executando
 

@@ -15,14 +15,21 @@ public:
     void computeCellSize(const Maze &maze);
     void initOpenGLResources(); 
 
+    // Atualiza as dimensoes usadas para a projecao (aspect ratio) quando o
+    // Canvas Swing/AWT que hospeda a janela GLFW embutida e redimensionado.
+    // Nao mexe em nenhum buffer/textura, so nos valores usados para montar
+    // a matriz de projecao em applyCameraAndLight()/drawTextOnFloor().
+    void resize(int screenWidth, int screenHeight);
+
     void drawMaze(const Maze &maze) const;
     void drawVisited(const Maze &maze, const SolveResult &result, size_t stepCount) const;
     void drawPath(const Maze &maze, const SolveResult &result, size_t stepCount) const;
     void drawStartAndGoal(const Maze &maze) const;
 
-    // Controla o ângulo da câmera
+    // Controla o ângulo da câmera (agora manipulados via mouse - ver motor.cpp)
     float cameraYaw;
     float cameraPitch;
+    float cameraZoom = 1.0f; // 1.0 = distancia padrao; <1 aproxima, >1 afasta (scroll do mouse)
 
 private:
     int screenWidth_;

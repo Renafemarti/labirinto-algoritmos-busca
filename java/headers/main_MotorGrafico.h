@@ -10,10 +10,10 @@ extern "C" {
 /*
  * Class:     main_MotorGrafico
  * Method:    init
- * Signature: (II)V
+ * Signature: (Ljava/awt/Canvas;II)V
  */
 JNIEXPORT void JNICALL Java_main_MotorGrafico_init
-  (JNIEnv *, jobject, jint, jint);
+  (JNIEnv *, jobject, jobject, jint, jint);
 
 /*
  * Class:     main_MotorGrafico
@@ -26,10 +26,18 @@ JNIEXPORT jboolean JNICALL Java_main_MotorGrafico_validateMazeFile
 /*
  * Class:     main_MotorGrafico
  * Method:    initFromFile
- * Signature: (Ljava/lang/String;)V
+ * Signature: (Ljava/awt/Canvas;Ljava/lang/String;)V
  */
 JNIEXPORT void JNICALL Java_main_MotorGrafico_initFromFile
-  (JNIEnv *, jobject, jstring);
+  (JNIEnv *, jobject, jobject, jstring);
+
+/*
+ * Class:     main_MotorGrafico
+ * Method:    resizeViewport
+ * Signature: (II)V
+ */
+JNIEXPORT void JNICALL Java_main_MotorGrafico_resizeViewport
+  (JNIEnv *, jobject, jint, jint);
 
 /*
  * Class:     main_MotorGrafico
@@ -38,6 +46,14 @@ JNIEXPORT void JNICALL Java_main_MotorGrafico_initFromFile
  */
 JNIEXPORT void JNICALL Java_main_MotorGrafico_generateNewMaze
   (JNIEnv *, jobject);
+
+/*
+ * Class:     main_MotorGrafico
+ * Method:    setMazeAlgorithm
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_main_MotorGrafico_setMazeAlgorithm
+  (JNIEnv *, jobject, jint);
 
 /*
  * Class:     main_MotorGrafico
